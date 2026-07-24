@@ -48,23 +48,25 @@ class SandboxManager:
             stderr=asyncio.subprocess.PIPE
         )
         
-        # Read stderr of cloudflared to find the .trycloudflare.com url
         url = None
-        for _ in range(30):
-            try:
-                # cloudflared logs to stderr
-                line = await asyncio.wait_for(tunnel_proc.stderr.readline(), timeout=1.0)
-                line_str = line.decode('utf-8')
+        async def read_until_url():
+            while True:
+                line = await tunnel_proc.stderr.readline()
+                if not line:
+                    break
+                line_str = line.decode('utf-8', errors='ignore')
                 if "trycloudflare.com" in line_str:
-                    # extract url
                     import re
                     match = re.search(r'(https://[a-zA-Z0-9-]+\.trycloudflare\.com)', line_str)
                     if match:
-                        url = match.group(1)
-                        break
-            except asyncio.TimeoutError:
-                continue
-                
+                        return match.group(1)
+            return None
+
+        try:
+            url = await asyncio.wait_for(read_until_url(), timeout=15.0)
+        except asyncio.TimeoutError:
+            pass
+        
         if not url:
             # Cleanup
             server_proc.terminate()
