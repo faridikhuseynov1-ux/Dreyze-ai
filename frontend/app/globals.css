@@ -3,33 +3,33 @@
 @import "katex/dist/katex.min.css";
 
 :root {
-  --color-bg: #000000;
-  --color-card: #111111;
-  --color-card-hover: #161616;
-  --color-border: #1f1f1f;
+  --color-bg: #030305;
+  --color-card: rgba(17, 17, 17, 0.6);
+  --color-card-hover: rgba(22, 22, 22, 0.8);
+  --color-border: rgba(255, 255, 255, 0.08);
   --color-text: #ffffff;
-  --color-text-secondary: #8a8a8a;
+  --color-text-secondary: #a1a1aa;
   --color-accent: #ffffff;
 }
 
 html.dark, :root[data-theme="dark"] {
-  --color-bg: #000000;
-  --color-card: #111111;
-  --color-card-hover: #161616;
-  --color-border: #1f1f1f;
+  --color-bg: #030305;
+  --color-card: rgba(17, 17, 17, 0.6);
+  --color-card-hover: rgba(22, 22, 22, 0.8);
+  --color-border: rgba(255, 255, 255, 0.08);
   --color-text: #ffffff;
-  --color-text-secondary: #8a8a8a;
+  --color-text-secondary: #a1a1aa;
   --color-accent: #ffffff;
 }
 
 html.light, :root[data-theme="light"] {
-  --color-bg: #ffffff;
-  --color-card: #f4f4f5;
-  --color-card-hover: #e4e4e7;
-  --color-border: #e4e4e7;
-  --color-text: #09090b;
-  --color-text-secondary: #71717a;
-  --color-accent: #09090b;
+  --color-bg: #f8fafc;
+  --color-card: rgba(255, 255, 255, 0.7);
+  --color-card-hover: rgba(255, 255, 255, 0.9);
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-text: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-accent: #0f172a;
 }
 
 @theme inline {
@@ -200,3 +200,14 @@ body {
 .prose-chat.prose-compact td {
   padding: 0.3em 0.5em;
 }
+
+@keyframes blob {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+.animate-blob { animation: blob 7s infinite; }
+.animation-delay-2000 { animation-delay: 2s; }
+.animation-delay-4000 { animation-delay: 4s; }
+

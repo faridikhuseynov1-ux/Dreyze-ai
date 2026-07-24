@@ -298,7 +298,7 @@ export function Sidebar() {
   };
 
   const content = (
-    <div className="flex h-full w-full flex-col bg-card">
+    <div className="flex h-full w-full flex-col backdrop-blur-3xl bg-card/60">
       <div className="flex items-center justify-between px-4 pt-4">
         <div className="flex items-center gap-2">
           <Image src="/logo.png" alt="Dreyze AI" width={28} height={28} className="h-7 w-7 object-contain" />
