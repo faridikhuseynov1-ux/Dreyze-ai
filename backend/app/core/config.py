@@ -16,9 +16,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
-    # Frontend / CORS
-    FRONTEND_URL: str = "http://localhost:3000"
-    ALLOWED_ORIGINS: str = "http://localhost:3000"
+    FRONTEND_URL: str = "https://dreyzfarid.online"
+    ALLOWED_ORIGINS: str = "https://dreyzfarid.online"
 
     # Email
     RESEND_API_KEY: str

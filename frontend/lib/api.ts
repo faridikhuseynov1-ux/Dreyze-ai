@@ -1,6 +1,6 @@
 import { useAuthStore } from "@/lib/store";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://dreyzfarid.online/api";
 
 export class ApiError extends Error {
   status: number;
