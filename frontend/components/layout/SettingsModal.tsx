@@ -229,14 +229,17 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="flex h-full max-h-[85vh] w-full max-w-5xl overflow-hidden rounded-2xl border border-border bg-[#1e1e1e] shadow-2xl sm:max-h-[700px]"
+        className="flex flex-col sm:flex-row h-full max-h-[90vh] w-full max-w-5xl overflow-hidden rounded-2xl border border-border bg-[#1e1e1e] shadow-2xl sm:max-h-[700px]"
       >
         {/* Sidebar */}
-        <div className="w-64 shrink-0 border-r border-border bg-[#121212] flex flex-col">
+        <div className="w-full sm:w-64 shrink-0 border-b sm:border-b-0 sm:border-r border-border bg-[#121212] flex flex-col">
           <div className="p-4 flex items-center justify-between">
             <h2 className="font-semibold text-white">Настройки</h2>
+            <button onClick={onClose} className="sm:hidden rounded-full p-1 text-text-secondary hover:bg-white/10 hover:text-white">
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <nav className="flex-1 space-y-1 p-2">
+          <nav className="flex sm:flex-col overflow-x-auto space-x-2 sm:space-x-0 sm:space-y-1 p-2 pb-0 sm:pb-2 scrollbar-none">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -244,14 +247,14 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as TabId)}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                    "flex shrink-0 sm:w-full items-center gap-3 rounded-t-xl sm:rounded-xl px-3 py-2 text-sm font-medium transition-colors border-b-2 sm:border-b-0",
                     activeTab === tab.id
-                      ? "bg-white/10 text-white"
-                      : "text-text-secondary hover:bg-white/5 hover:text-white"
+                      ? "bg-white/10 text-white border-white sm:border-transparent"
+                      : "text-text-secondary hover:bg-white/5 hover:text-white border-transparent"
                   )}
                 >
                   <Icon className="h-4 w-4" />
-                  {tab.label}
+                  <span className="whitespace-nowrap">{tab.label}</span>
                 </button>
               );
             })}
@@ -260,7 +263,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
         {/* Content */}
         <div className="flex-1 flex flex-col min-w-0 bg-[#1e1e1e]">
-          <div className="flex justify-end p-4 border-b border-border/50">
+          <div className="hidden sm:flex justify-end p-4 border-b border-border/50">
             <button onClick={onClose} className="rounded-full p-1 text-text-secondary hover:bg-white/10 hover:text-white">
               <X className="h-5 w-5" />
             </button>

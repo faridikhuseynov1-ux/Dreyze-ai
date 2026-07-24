@@ -11,8 +11,6 @@ from app.core.config import settings
 Mode = Literal["fast", "smart", "reasoning", "research", "vision"]
 
 # Model families are resolved to concrete OpenRouter ids per selected mode.
-# "vision" entries are used whenever the request carries image attachments
-# and the base model for that family cannot see images.
 MODEL_CATALOG: dict[str, dict[str, str]] = {
     "claude": {
         "default": "opus 4.5",

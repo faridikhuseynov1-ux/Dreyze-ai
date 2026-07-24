@@ -10,8 +10,34 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Dreyze AI",
-  description: "Приватный AI-чат с памятью, множеством моделей и режимов",
+  title: {
+    default: "Dreyze AI",
+    template: "%s | Dreyze AI",
+  },
+  description: "Приватный AI-чат с памятью, множеством передовых моделей (ChatGPT, Claude, Gemini, DeepSeek) и расширенными режимами работы.",
+  keywords: ["Dreyze AI", "Dreyze", "AI chat", "нейросеть чат", "ИИ ассистент", "ChatGPT альтернатива", "Claude альтернатива", "приватный чат", "dreyzfarid"],
+  authors: [{ name: "Dreyze AI" }],
+  creator: "Dreyze",
+  metadataBase: new URL("https://dreyzfarid.online"),
+  openGraph: {
+    type: "website",
+    locale: "ru_RU",
+    url: "https://dreyzfarid.online",
+    title: "Dreyze AI - Ваш умный ИИ-ассистент",
+    description: "Приватный AI-чат с памятью, множеством передовых моделей и расширенными режимами работы. Dreyze AI — это ваш личный помощник.",
+    siteName: "Dreyze AI",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   icons: {
     icon: "/logo.png",
     shortcut: "/logo.png",

@@ -489,15 +489,6 @@ export function Sidebar() {
           onOpenSettings={() => setIsSettingsModalOpen(true)} 
         />
       </div>
-      
-      <AnimatePresence>
-        {isProfileModalOpen && (
-          <EditProfileModal onClose={() => setIsProfileModalOpen(false)} />
-        )}
-        {isSettingsModalOpen && (
-          <SettingsModal onClose={() => setIsSettingsModalOpen(false)} />
-        )}
-      </AnimatePresence>
     </div>
   );
 
@@ -525,6 +516,15 @@ export function Sidebar() {
               {content}
             </motion.aside>
           </>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isProfileModalOpen && (
+          <EditProfileModal onClose={() => setIsProfileModalOpen(false)} />
+        )}
+        {isSettingsModalOpen && (
+          <SettingsModal onClose={() => setIsSettingsModalOpen(false)} />
         )}
       </AnimatePresence>
     </>

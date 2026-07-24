@@ -290,7 +290,7 @@ export function ChatMessage({ message, userName, onEdit, onDelete, onRegenerate,
                               className="flex items-center gap-1 rounded-lg px-2 py-1 transition-colors hover:bg-card hover:text-green-400 font-medium"
                             >
                               <Globe className="h-3.5 w-3.5" />
-                              <span>Preview</span>
+                              <span className="hidden sm:inline">Preview</span>
                             </button>
                           )}
                           <button
@@ -299,7 +299,7 @@ export function ChatMessage({ message, userName, onEdit, onDelete, onRegenerate,
                             className="flex items-center gap-1 rounded-lg px-2 py-1 transition-colors hover:bg-card hover:text-text"
                           >
                             {isCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                            <span>{isCopied ? "Copied" : "Copy"}</span>
+                            <span className="hidden sm:inline">{isCopied ? "Copied" : "Copy"}</span>
                           </button>
                           <button
                             type="button"
@@ -307,7 +307,7 @@ export function ChatMessage({ message, userName, onEdit, onDelete, onRegenerate,
                             className="flex items-center gap-1 rounded-lg px-2 py-1 transition-colors hover:bg-card hover:text-text"
                           >
                             <Download className="h-3.5 w-3.5" />
-                            <span>Download</span>
+                            <span className="hidden sm:inline">Download</span>
                           </button>
                         </div>
                       </div>
