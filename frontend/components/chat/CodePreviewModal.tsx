@@ -66,36 +66,61 @@ export function CodePreviewModal({ code, language, onClose }: CodePreviewModalPr
 </html>`;
     }
 
-    let currentSandboxId: string | null = null;
-
-    async function startSandbox() {
-      try {
-        const res = await apiRequest<{id: string, url: string}>("/sandbox/start", {
-          method: "POST",
-          body: JSON.stringify({ code: srcDoc, lang: "html" })
-        });
-        currentSandboxId = res.id;
-        setSandboxId(res.id);
-        setTunnelUrl(res.url);
-      } catch (err) {
-        console.error("Failed to start sandbox:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    startSandbox();
-
-    return () => {
-      if (currentSandboxId) {
-        apiRequest(`/sandbox/stop/${currentSandboxId}`, { method: "POST" }).catch(console.error);
-      }
-    };
+    // Start sandbox removed. We'll use srcDoc directly for instant, secure preview without Cloudflare.
+    setLoading(false);
   }, [code, language]);
 
   const handleClose = () => {
     onClose();
   };
+
+  // Generate the HTML to inject
+  let currentSrcDoc = code;
+  if (language === "jsx" || language === "tsx" || language === "javascript" || language === "js" || language === "react") {
+    if (!code.includes("<html>")) {
+      currentSrcDoc = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body { background-color: #121212; color: #ffffff; margin: 0; padding: 0; font-family: sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    ${code}
+    
+    if (typeof App !== 'undefined') {
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    } else if (typeof Example !== 'undefined') {
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<Example />);
+    }
+  </script>
+</body>
+</html>`;
+    }
+  } else if (!code.includes("<html>") && (language === "html" || language === "css")) {
+      currentSrcDoc = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>body { background-color: #ffffff; color: #000000; margin: 0; padding: 1rem; font-family: sans-serif; }</style>
+  ${language === 'css' ? `<style>${code}</style>` : ''}
+</head>
+<body>
+  ${language === 'html' ? code : 'Preview active'}
+</body>
+</html>`;
+  }
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 px-4 py-4 backdrop-blur-md">
@@ -116,30 +141,13 @@ export function CodePreviewModal({ code, language, onClose }: CodePreviewModalPr
               <div className="h-3 w-3 rounded-full bg-green-500/80"></div>
             </div>
             <div className="flex items-center gap-2 rounded-lg bg-[#1e1e1e] px-3 py-1 text-xs text-text-secondary border border-border/50">
-              {loading ? (
-                <span className="flex items-center gap-2 text-yellow-500">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Подключение Cloudflare...
-                </span>
-              ) : (
-                <span className="flex items-center gap-1.5 text-green-400">
-                  <Globe className="h-3.5 w-3.5" />
-                  {tunnelUrl ? tunnelUrl.replace('https://', '') : "localhost"}
-                </span>
-              )}
+              <span className="flex items-center gap-1.5 text-green-400">
+                <Globe className="h-3.5 w-3.5" />
+                Instant Preview
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {tunnelUrl && (
-              <a
-                href={tunnelUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-text-secondary hover:bg-white/10 hover:text-white transition-colors"
-                title="Открыть в новой вкладке"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-              </a>
-            )}
             <button
               onClick={() => setKey((k) => k + 1)}
               className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-text-secondary hover:bg-white/10 hover:text-white transition-colors"
@@ -166,22 +174,13 @@ export function CodePreviewModal({ code, language, onClose }: CodePreviewModalPr
         </div>
 
         <div className="relative flex-1 bg-white flex flex-col items-center justify-center">
-          {loading ? (
-             <div className="flex flex-col items-center gap-4 text-text-secondary">
-               <Loader2 className="h-10 w-10 animate-spin text-accent" />
-               <p className="font-medium">Запуск локального сервера и Cloudflare Tunnel...</p>
-             </div>
-          ) : tunnelUrl ? (
             <iframe
               key={key}
-              src={tunnelUrl}
+              srcDoc={currentSrcDoc}
               title="Code Preview"
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
               className="absolute inset-0 h-full w-full border-none bg-white"
             />
-          ) : (
-             <div className="text-red-500 font-medium">Ошибка запуска песочницы</div>
-          )}
         </div>
       </motion.div>
     </div>
