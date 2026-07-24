@@ -1,0 +1,144 @@
+import base64
+import json
+from collections.abc import AsyncGenerator
+from pathlib import Path
+from typing import Literal
+
+import httpx
+
+from app.core.config import settings
+
+Mode = Literal["fast", "smart", "reasoning", "research", "vision"]
+
+# Model families are resolved to concrete OpenRouter ids per selected mode.
+# "vision" entries are used whenever the request carries image attachments
+# and the base model for that family cannot see images.
+MODEL_CATALOG: dict[str, dict[str, str]] = {
+    "claude": {
+        "default": "opus 4.5",
+        "fast": "sonnet 4.5",
+        "reasoning": "sonnet 4.5",
+        "vision": "opus 4.5",
+    }
+}
+
+REASONING_MODES = {"reasoning"}
+
+
+def resolve_model(model: str, mode: Mode, has_images: bool) -> tuple[str, bool, bool]:
+    """Returns (openrouter_model_id, use_reasoning, use_web_search)."""
+    family = MODEL_CATALOG.get(model, MODEL_CATALOG["claude"])
+
+    if has_images or mode == "vision":
+        model_id = family.get("vision", family["default"])
+    elif mode == "fast":
+        model_id = family.get("fast", family["default"])
+    elif mode == "reasoning":
+        model_id = family.get("reasoning", family["default"])
+    else:
+        model_id = family["default"]
+
+    use_reasoning = mode == "reasoning"
+    use_web_search = mode == "research"
+    return model_id, use_reasoning, use_web_search
+
+
+def _image_to_url(relative_or_absolute_url: str, content_type: str) -> str:
+    """Local uploads live on disk and are not necessarily internet-reachable,
+    so they're inlined as base64 data URIs, which every vision-capable model accepts.
+    """
+    if relative_or_absolute_url.startswith("http://") or relative_or_absolute_url.startswith("https://"):
+        return relative_or_absolute_url
+
+    relative_path = relative_or_absolute_url.removeprefix("/uploads/")
+    file_path = Path(settings.UPLOAD_DIR) / relative_path
+    if not file_path.is_file():
+        return relative_or_absolute_url
+
+    encoded = base64.b64encode(file_path.read_bytes()).decode("ascii")
+    return f"data:{content_type};base64,{encoded}"
+
+
+def build_user_content(text: str, attachments: list[dict]) -> str | list[dict]:
+    """Builds an OpenAI-compatible content payload, inlining images as data URIs."""
+    images = [a for a in attachments if a.get("kind") == "image"]
+    if not images:
+        return text
+
+    parts: list[dict] = [{"type": "text", "text": text or "Проанализируй это изображение."}]
+    for image in images:
+        url = _image_to_url(image["url"], image.get("content_type", "image/png"))
+        parts.append({"type": "image_url", "image_url": {"url": url}})
+    return parts
+
+
+async def stream_completion(
+    messages: list[dict],
+    model: str,
+    mode: Mode,
+    has_images: bool,
+) -> AsyncGenerator[str, None]:
+    """Streams assistant text chunks from OpenRouter as they arrive."""
+    model_id, use_reasoning, use_web_search = resolve_model(model, mode, has_images)
+    if use_web_search:
+        model_id = f"{model_id}:online"
+
+    payload: dict = {
+        "model": model_id,
+        "messages": messages,
+        "stream": True,
+        "temperature": 0.4 if mode == "fast" else 0.7,
+    }
+    if use_reasoning:
+        payload["reasoning"] = {"effort": "high"}
+
+    headers = {
+        "Content-Type": "application/json",
+        "HTTP-Referer": settings.FRONTEND_URL,
+        "X-Title": "Dreyze AI Chat",
+    }
+
+    keys = [settings.OPENROUTER_API_KEY]
+    if settings.OPENROUTER_API_KEY_FALLBACK_1:
+        keys.append(settings.OPENROUTER_API_KEY_FALLBACK_1)
+    if settings.OPENROUTER_API_KEY_FALLBACK_2:
+        keys.append(settings.OPENROUTER_API_KEY_FALLBACK_2)
+
+    last_error = None
+    for api_key in keys:
+        headers["Authorization"] = f"Bearer {api_key}"
+        try:
+            async with httpx.AsyncClient(timeout=120) as client:
+                async with client.stream(
+                    "POST", f"{settings.OPENROUTER_BASE_URL}/chat/completions", json=payload, headers=headers
+                ) as response:
+                    if response.status_code != 200:
+                        error_body = await response.aread()
+                        last_error = f"OpenRouter error {response.status_code}: {error_body.decode(errors='ignore')}"
+                        if response.status_code in (429, 401, 403, 402, 529):
+                            # Try next key
+                            continue
+                        else:
+                            raise RuntimeError(last_error)
+        
+                    async for line in response.aiter_lines():
+                        if not line or not line.startswith("data: "):
+                            continue
+                        data = line.removeprefix("data: ").strip()
+                        if data == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data)
+                        except json.JSONDecodeError:
+                            continue
+                        delta = chunk.get("choices", [{}])[0].get("delta", {})
+                        content = delta.get("content")
+                        if content:
+                            yield content
+                    return # Exit the function after a successful stream
+        except Exception as e:
+            last_error = str(e)
+            continue
+            
+    if last_error:
+        raise RuntimeError(f"All API keys failed. Last error: {last_error}")
