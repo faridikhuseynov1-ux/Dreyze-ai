@@ -56,7 +56,7 @@ async def security_headers(request: Request, call_next):
 
 
 Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+# Uploads are no longer served publicly via StaticFiles
 
 app.include_router(auth_router, prefix="/api")
 app.include_router(users_router, prefix="/api")

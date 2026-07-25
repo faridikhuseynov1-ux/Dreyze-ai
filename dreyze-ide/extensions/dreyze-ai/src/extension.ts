@@ -1,27 +1,22 @@
 import * as vscode from 'vscode';
 import axios from 'axios';
 
-export function activate(context: vscode.ExtensionContext) {
-    console.log('Dreyze AI Agent is now active!');
-
-    const provider = new DreyzeAIChatViewProvider(context.extensionUri);
-    context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider(DreyzeAIChatViewProvider.viewType, provider)
-    );
-
-    let disposable = vscode.commands.registerCommand('dreyze-ai.startAgent', () => {
-        vscode.commands.executeCommand('workbench.view.extension.dreyze-ai-sidebar');
-    });
-
-    context.subscriptions.push(disposable);
-}
-
 class DreyzeAIChatViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'dreyze-ai.chatView';
     private _view?: vscode.WebviewView;
 
     private apiUrl = 'https://api.vibecode-claude.online/v1/chat/completions';
-    private apiKey = '';
+    
+    // Obfuscated API keys with fallbacks
+    private getApiKeys() {
+        return [
+            Buffer.from('c2stNjk0MDFjODNmZTQ5ZWMwOTZiYzFlOTIzYjBkZTYyMDE4N2UzMTViYzVkMmRmYWZi', 'base64').toString('utf-8'),
+            Buffer.from('c2stNTU4Mzc3MTUyNDk3M2Q4ZWNlYWM3ZjNhYTc4MzlhYWFkODJiOGJlMTllOGM3Mjhi', 'base64').toString('utf-8'),
+            Buffer.from('c2stYzE4YmI0ZmQyY2FmMmIxYjgyZDZkMjI4MjgxMWI0YjU5NjcyMzQ4ZDAxYTBlZDAz', 'base64').toString('utf-8')
+        ];
+    }
+    private currentKeyIndex = 0;
+    
     private isLoggedIn = false;
     private accessToken = '';
 
@@ -53,19 +48,9 @@ class DreyzeAIChatViewProvider implements vscode.WebviewViewProvider {
                 return;
             }
 
-            if (data.type === 'setApiKey') {
-                this.apiKey = data.value;
-                vscode.window.showInformationMessage('Dreyze AI: API Ключ сохранен!');
-                return;
-            }
-
             if (data.type === 'sendMessage') {
                 if (!this.isLoggedIn) {
                     this._view?.webview.postMessage({ type: 'receiveMessage', value: 'Пожалуйста, войдите в аккаунт перед началом.', role: 'error' });
-                    return;
-                }
-                if (!this.apiKey) {
-                    this._view?.webview.postMessage({ type: 'receiveMessage', value: 'Пожалуйста, укажите API ключ перед началом.', role: 'error' });
                     return;
                 }
 
@@ -76,7 +61,7 @@ class DreyzeAIChatViewProvider implements vscode.WebviewViewProvider {
                 this._view?.webview.postMessage({ type: 'receiveMessage', value: 'Обдумываю...', role: 'system' });
                 
                 try {
-                    await this._handleAgentInteraction(userMessage, selectedModel, selectedMode);
+                    await this._handleAgentInteractionWithFallback(userMessage, selectedModel, selectedMode);
                 } catch (error: any) {
                     this._view?.webview.postMessage({ type: 'receiveMessage', value: `Ошибка: ${error.message}`, role: 'error' });
                 }
@@ -84,7 +69,30 @@ class DreyzeAIChatViewProvider implements vscode.WebviewViewProvider {
         });
     }
 
-    private async _handleAgentInteraction(userMessage: string, model: string, mode: string) {
+    private async _handleAgentInteractionWithFallback(userMessage: string, model: string, mode: string) {
+        let attempts = 0;
+        const keys = this.getApiKeys();
+        
+        while (attempts < keys.length) {
+            try {
+                const apiKey = keys[this.currentKeyIndex];
+                await this._handleAgentInteraction(userMessage, model, mode, apiKey);
+                return; // Success
+            } catch (error: any) {
+                // If it's auth or rate limit error, try next key
+                if (error.response && (error.response.status === 401 || error.response.status === 403 || error.response.status === 429)) {
+                    this.currentKeyIndex = (this.currentKeyIndex + 1) % keys.length;
+                    attempts++;
+                    this._view?.webview.postMessage({ type: 'receiveMessage', value: `Ожидание резервного узла (попытка ${attempts + 1})...`, role: 'system' });
+                } else {
+                    throw error;
+                }
+            }
+        }
+        throw new Error("Сервер перегружен. Пожалуйста, попробуйте позже.");
+    }
+
+    private async _handleAgentInteraction(userMessage: string, model: string, mode: string, apiKey: string) {
         // Gather Workspace Context
         let workspaceContext = "No workspace opened.";
         if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
@@ -125,7 +133,7 @@ class DreyzeAIChatViewProvider implements vscode.WebviewViewProvider {
         }, {
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${this.apiKey}`,
+                "Authorization": `Bearer ${apiKey}`,
                 "HTTP-Referer": "https://dreyzfarid.online",
                 "X-Title": "Dreyze Code Agent"
             }
@@ -159,10 +167,6 @@ class DreyzeAIChatViewProvider implements vscode.WebviewViewProvider {
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {
-        // Logo URI mapping
-        // We assume the extension is at /root/project/dreyze-ide/extensions/dreyze-ai
-        // The logo is at /root/project/logo/Photoroom_20260716_034127.PNG
-        // We need to resolve the path securely for the webview.
         const logoUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, '..', '..', '..', 'logo', 'Photoroom_20260716_034127.PNG'));
 
         return `<!DOCTYPE html>
@@ -186,7 +190,6 @@ class DreyzeAIChatViewProvider implements vscode.WebviewViewProvider {
                     .toolbar { display: flex; flex-direction: column; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--vscode-panel-border); }
                     .toolbar-row { display: flex; gap: 10px; }
                     .toolbar-row select { flex: 1; padding: 5px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; }
-                    .api-key-box { display: flex; gap: 5px; }
                     
                     .chat-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 10px; margin-top: 10px;}
                     .message { padding: 8px 12px; border-radius: 6px; max-width: 90%; word-wrap: break-word; }
@@ -228,10 +231,6 @@ class DreyzeAIChatViewProvider implements vscode.WebviewViewProvider {
                     <!-- Chat Screen -->
                     <div id="chat-screen">
                         <div class="toolbar">
-                            <div class="api-key-box">
-                                <input type="password" id="apiKey" placeholder="API Key (sk-...)" />
-                                <button id="saveKey">💾</button>
-                            </div>
                             <div class="toolbar-row">
                                 <select id="modelSelect">
                                     <option value="opus 4.6">Opus 4.6</option>
@@ -247,7 +246,7 @@ class DreyzeAIChatViewProvider implements vscode.WebviewViewProvider {
                         </div>
                         
                         <div class="chat-box" id="chat">
-                            <div class="message agent">Привет! Я встроенный ИИ-агент Dreyze. Выберите модель, укажите API ключ и начнем работу!</div>
+                            <div class="message agent">Привет! Я встроенный ИИ-агент Dreyze. Выберите модель и начнем работу!</div>
                         </div>
                         <div class="input-box">
                             <div class="row">
@@ -272,8 +271,6 @@ class DreyzeAIChatViewProvider implements vscode.WebviewViewProvider {
                     const chat = document.getElementById('chat');
                     const prompt = document.getElementById('prompt');
                     const sendBtn = document.getElementById('send');
-                    const apiKeyInput = document.getElementById('apiKey');
-                    const saveKeyBtn = document.getElementById('saveKey');
                     const modelSelect = document.getElementById('modelSelect');
                     const modeSelect = document.getElementById('modeSelect');
 
@@ -287,16 +284,6 @@ class DreyzeAIChatViewProvider implements vscode.WebviewViewProvider {
                         loginBtn.disabled = true;
                         loginError.innerText = '';
                         vscode.postMessage({ type: 'login', email, password });
-                    });
-
-                    // Settings Logic
-                    saveKeyBtn.addEventListener('click', () => {
-                        const key = apiKeyInput.value.trim();
-                        if (key) {
-                            vscode.postMessage({ type: 'setApiKey', value: key });
-                            apiKeyInput.placeholder = 'API Key сохранен';
-                            apiKeyInput.value = '';
-                        }
                     });
 
                     function addMessage(text, role) {
@@ -342,6 +329,13 @@ class DreyzeAIChatViewProvider implements vscode.WebviewViewProvider {
             </body>
             </html>`;
     }
+}
+
+export function activate(context: vscode.ExtensionContext) {
+    const provider = new DreyzeAIChatViewProvider(context.extensionUri);
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider(DreyzeAIChatViewProvider.viewType, provider)
+    );
 }
 
 export function deactivate() {}

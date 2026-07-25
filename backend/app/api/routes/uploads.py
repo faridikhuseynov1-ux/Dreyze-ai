@@ -65,3 +65,21 @@ async def upload_file(
         "content_type": record.content_type,
         "kind": record.kind,
     }
+
+from fastapi.responses import FileResponse
+
+@router.get("/{user_id}/{filename}")
+async def get_uploaded_file(
+    user_id: str,
+    filename: str,
+    user: User = Depends(get_current_user),
+):
+    # Only allow users to view files if they are authenticated.
+    # Optionally, you can add logic here to only allow the owner to view their own files:
+    # if str(user.id) != user_id: raise HTTPException(status.HTTP_403_FORBIDDEN)
+    
+    file_path = Path(settings.UPLOAD_DIR) / user_id / filename
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "File not found")
+        
+    return FileResponse(path=file_path)
