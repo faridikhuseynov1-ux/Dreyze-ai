@@ -37,3 +37,10 @@ jobs:
         
       - name: Compile
         run: npm run compile
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dreyze-ide-compiled
+          path: ./dreyze-ide/out/
+          retention-days: 7
