@@ -30,6 +30,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+
+      - name: Set VS Environment
+        run: |
+          $vsPath = &"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          echo "vs2022_install=$vsPath" >> $env:GITHUB_ENV
           
       - name: Install dependencies
         run: npm ci || npm install
