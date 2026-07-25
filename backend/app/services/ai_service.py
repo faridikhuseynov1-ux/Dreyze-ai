@@ -96,26 +96,30 @@ async def stream_completion(
         "X-Title": "Dreyze AI Chat",
     }
 
-    keys = [settings.OPENROUTER_API_KEY]
-    if settings.OPENROUTER_API_KEY_FALLBACK_1:
-        keys.append(settings.OPENROUTER_API_KEY_FALLBACK_1)
-    if settings.OPENROUTER_API_KEY_FALLBACK_2:
-        keys.append(settings.OPENROUTER_API_KEY_FALLBACK_2)
+    providers = []
+    try:
+        providers = json.loads(settings.AI_PROVIDERS)
+    except Exception:
+        pass
 
     last_error = None
-    for api_key in keys:
+    for provider in providers:
+        api_url = provider.get("url", "https://api.vibecode-claude.online/v1")
+        if not api_url.endswith("/v1") and not api_url.endswith("/chat/completions"):
+            api_url = api_url.rstrip("/") + "/v1"
+            
+        api_key = provider.get("key")
         headers["Authorization"] = f"Bearer {api_key}"
         try:
             async with httpx.AsyncClient(timeout=120) as client:
                 async with client.stream(
-                    "POST", f"{settings.OPENROUTER_BASE_URL}/chat/completions", json=payload, headers=headers
+                    "POST", f"{api_url}/chat/completions", json=payload, headers=headers
                 ) as response:
                     if response.status_code != 200:
                         error_body = await response.aread()
-                        last_error = f"OpenRouter error {response.status_code}: {error_body.decode(errors='ignore')}"
+                        last_error = f"Error {response.status_code} from {api_url}: {error_body.decode(errors='ignore')}"
                         if response.status_code in (429, 401, 403, 402, 529):
-                            # Try next key
-                            continue
+                            continue # Try next provider
                         else:
                             raise RuntimeError(last_error)
         
@@ -139,4 +143,5 @@ async def stream_completion(
             continue
             
     if last_error:
-        raise RuntimeError(f"All API keys failed. Last error: {last_error}")
+        raise RuntimeError(f"All AI providers failed. Last error: {last_error}")
+

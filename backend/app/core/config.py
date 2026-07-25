@@ -23,11 +23,8 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str
     EMAIL_FROM: str
 
-    # AI
-    OPENROUTER_API_KEY: str
-    OPENROUTER_API_KEY_FALLBACK_1: str | None = None
-    OPENROUTER_API_KEY_FALLBACK_2: str | None = None
-    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    # AI Providers
+    AI_PROVIDERS: str = '[]'
 
     # Uploads
     UPLOAD_DIR: str = "./uploads"

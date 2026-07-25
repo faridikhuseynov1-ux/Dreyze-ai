@@ -59,24 +59,38 @@ async def extract_memories(user_message: str, assistant_message: str) -> list[di
         f"Пользователь: {user_message}\nАссистент: {assistant_message}"
     )
 
+    try:
+        providers = json.loads(settings.AI_PROVIDERS)
+        if not providers: return []
+        api_url = providers[0].get("url", "https://api.vibecode-claude.online/v1")
+        if not api_url.endswith("/v1") and not api_url.endswith("/chat/completions"):
+            api_url = api_url.rstrip("/") + "/v1"
+        api_key = providers[0].get("key")
+    except Exception:
+        return []
+        
     headers = {
-        "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}",
     }
+
     payload = {
-        "model": EXTRACTION_MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0,
-        "max_tokens": 400,
+        "model": "sonnet 4.5",
+        "messages": [
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": f"Пользователь: {user_message}\nАссистент: {assistant_message}"},
+        ],
+        "temperature": 0.3,
     }
 
     try:
-        async with httpx.AsyncClient(timeout=20) as client:
-            response = await client.post(
-                f"{settings.OPENROUTER_BASE_URL}/chat/completions", json=payload, headers=headers
-            )
-            response.raise_for_status()
-            text = response.json()["choices"][0]["message"]["content"].strip()
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(f"{api_url}/chat/completions", json=payload, headers=headers)
+            if resp.status_code == 200:
+                data = resp.json()
+                text = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+            else:
+                return []
             text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
             facts = json.loads(text)
     except Exception:
