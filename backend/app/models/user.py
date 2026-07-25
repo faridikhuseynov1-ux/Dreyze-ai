@@ -18,6 +18,7 @@ class User(Base):
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    tokens_used: Mapped[int] = mapped_column(default=0)
 
     chat_sessions: Mapped[list["ChatSession"]] = relationship(  # noqa: F821
         back_populates="user", cascade="all, delete-orphan"

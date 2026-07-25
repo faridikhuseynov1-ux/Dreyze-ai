@@ -10,6 +10,7 @@ class UserOut(BaseModel):
     email: EmailStr
     avatar_url: str | None
     created_at: datetime
+    tokens_used: int = 0
 
     model_config = {"from_attributes": True}
 

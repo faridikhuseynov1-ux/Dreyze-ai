@@ -332,8 +332,8 @@ export function Sidebar() {
         <button
           onClick={handleNewChat}
           className={cn(
-            "flex w-full items-center gap-2 rounded-2xl border border-border bg-bg font-medium text-text transition-colors hover:bg-card-hover",
-            compactMode ? "px-3 py-1.5 text-xs" : "px-4 py-2.5 text-sm"
+            "flex w-full items-center gap-2 rounded-xl bg-transparent font-medium text-text transition-colors hover:bg-card-hover",
+            compactMode ? "px-3 py-1.5 text-xs" : "px-3 py-2.5 text-sm"
           )}
         >
           <Plus className={cn("shrink-0", compactMode ? "h-3.5 w-3.5" : "h-4 w-4")} />
@@ -342,10 +342,10 @@ export function Sidebar() {
 
         <button
           onClick={() => setIsCreatingFolder(!isCreatingFolder)}
-          className="flex w-full items-center gap-2 rounded-2xl border border-border/60 bg-bg/50 px-4 py-2 text-xs font-medium text-text-secondary transition-colors hover:bg-card-hover hover:text-text"
+          className="flex w-full items-center gap-2 rounded-xl bg-transparent px-3 py-2 text-xs font-medium text-text-secondary transition-colors hover:bg-card-hover hover:text-text"
         >
           <FolderPlus className="h-3.5 w-3.5" />
-          + Папка
+          Новая папка
         </button>
       </div>
 
@@ -393,13 +393,13 @@ export function Sidebar() {
         </form>
       )}
 
-      <div className="px-4 pb-2">
-        <div className="flex items-center gap-2 rounded-2xl border border-border bg-bg px-3 py-2">
+      <div className="px-3 pb-2">
+        <div className="flex items-center gap-2 rounded-xl bg-card-hover px-3 py-2">
           <Search className="h-4 w-4 text-text-secondary shrink-0" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Поиск по чатам (Ctrl+K)"
+            placeholder="Поиск..."
             className="w-full bg-transparent text-sm text-text placeholder:text-text-secondary outline-none"
           />
         </div>

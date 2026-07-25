@@ -11,6 +11,7 @@ export type ServerEvent =
   | { type: "chunk"; content: string }
   | { type: "done"; message: Message }
   | { type: "stopped"; message: Message }
+  | { type: "usage_update"; tokens_used: number }
   | { type: "error"; message: string };
 
 export interface ChatSocketHandlers {
@@ -18,6 +19,7 @@ export interface ChatSocketHandlers {
   onChunk: (content: string) => void;
   onDone: (message: Message) => void;
   onStopped: (message: Message) => void;
+  onUsageUpdate?: (tokensUsed: number) => void;
   onError: (message: string) => void;
   onClose?: () => void;
 }
@@ -58,6 +60,9 @@ export class ChatSocket {
           break;
         case "stopped":
           this.handlers.onStopped(data.message);
+          break;
+        case "usage_update":
+          this.handlers.onUsageUpdate?.(data.tokens_used);
           break;
         case "error":
           this.handlers.onError(data.message);

@@ -136,7 +136,7 @@ export function ChatMessage({ message, userName, onEdit, onDelete, onRegenerate,
         </div>
       )}
 
-      <div className={cn("flex max-w-[85%] flex-col gap-1.5 sm:max-w-[75%]", isUser && "items-end")}>
+      <div className={cn("flex w-full flex-col gap-1.5", isUser ? "max-w-[85%] sm:max-w-[75%] items-end" : "w-full")}>
         {message.is_pinned && (
           <div className="flex items-center gap-1 text-[10px] uppercase text-text-secondary font-semibold ml-2">
             <Pin className="h-3 w-3" /> Закреплено
@@ -164,7 +164,9 @@ export function ChatMessage({ message, userName, onEdit, onDelete, onRegenerate,
           <div
             className={cn(
               compactMode ? "prose-chat prose-compact text-xs" : "prose-chat text-sm",
-              isUser ? (compactMode ? "px-3.5 py-2 text-xs rounded-2xl bg-card text-text" : "px-5 py-3 text-sm rounded-3xl bg-card text-text") : "text-text"
+              isUser 
+                ? (compactMode ? "px-3.5 py-2 text-xs rounded-2xl bg-user-bubble text-text" : "px-5 py-3 text-sm rounded-3xl bg-user-bubble text-text") 
+                : "text-text w-full py-1"
             )}
           >
             {message.attachments && message.attachments.length > 0 && (

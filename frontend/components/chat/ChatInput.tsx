@@ -58,13 +58,13 @@ export function ChatInput({ onSend, isStreaming, onStop, disabledMessage }: Chat
   }
 
   return (
-    <div className="border-t border-border bg-bg px-4 pb-4 pt-3">
+    <div className="bg-bg px-4 pb-4 pt-2">
       {disabledMessage ? (
         <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-2 rounded-3xl border border-red-500/50 bg-red-500/10 p-4 text-center">
           <p className="text-sm text-red-200 font-medium">{disabledMessage}</p>
         </div>
       ) : (
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 rounded-3xl border border-border bg-card p-3">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 rounded-3xl border border-border bg-card p-3 shadow-sm focus-within:shadow-md transition-shadow">
           {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 px-1">
             {attachments.map((a) => (

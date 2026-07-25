@@ -1,5 +1,5 @@
 export type ModelId = "claude";
-export type ModeId = "fast" | "smart" | "reasoning" | "research" | "vision";
+export type ModeId = "fast" | "smart" | "reasoning" | "research" | "vision" | "video";
 
 export interface User {
   id: string;
@@ -7,6 +7,7 @@ export interface User {
   email: string;
   avatar_url: string | null;
   created_at: string;
+  tokens_used: number;
 }
 
 export interface ProfileStats {

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { X, User as UserIcon, Monitor, Database, ShieldAlert, Key, MessageSquare, Link as LinkIcon } from "lucide-react";
+import { X, User as UserIcon, Monitor, Database, ShieldAlert, Key, MessageSquare, Link as LinkIcon, Zap } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -16,7 +16,7 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-type TabId = "profile" | "interface" | "memory" | "password" | "data" | "instructions" | "services" | "danger";
+type TabId = "profile" | "interface" | "memory" | "password" | "data" | "instructions" | "services" | "usage" | "danger";
 
 export function SettingsModal({ onClose }: SettingsModalProps) {
   const router = useRouter();
@@ -220,6 +220,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     { id: "data", label: "Данные", icon: Database },
     { id: "instructions", label: "Custom Instructions", icon: MessageSquare },
     { id: "services", label: "Подключенные сервисы", icon: LinkIcon },
+    { id: "usage", label: "Лимиты", icon: Zap },
     { id: "danger", label: "Опасная зона", icon: ShieldAlert },
   ];
 
@@ -439,6 +440,27 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                     <Button onClick={handleSaveGithub} loading={savingGithub} className="self-start">
                       Сохранить
                     </Button>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "usage" && (
+                <div className="space-y-6">
+                  <h3 className="text-lg font-medium text-white mb-4">Использование и Лимиты</h3>
+                  <div className="rounded-xl border border-border bg-[#262626] p-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-white">Использовано: {user?.tokens_used?.toLocaleString("ru-RU") || 0}</span>
+                      <span className="text-sm font-medium text-text-secondary">1 000 000 лимит</span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-black/50">
+                      <div 
+                        className="h-full rounded-full bg-white transition-all duration-500" 
+                        style={{ width: `${Math.min(100, Math.round(((user?.tokens_used || 0) / 1000000) * 100))}%` }} 
+                      />
+                    </div>
+                    <p className="mt-4 text-xs text-text-secondary">
+                      У вас доступно 1 000 000 токенов каждый месяц. При достижении лимита доступ может быть ограничен.
+                    </p>
                   </div>
                 </div>
               )}

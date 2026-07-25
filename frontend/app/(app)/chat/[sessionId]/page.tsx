@@ -8,7 +8,8 @@ import { MessageList } from "@/components/chat/MessageList";
 import { TopBar } from "@/components/layout/TopBar";
 import { PipWrapper } from "@/components/layout/PipWrapper";
 import { useChatSession } from "@/hooks/useChatSession";
-import { useAuthStore, usePendingMessageStore, useUIStore } from "@/lib/store";
+import { useAuthStore, usePendingMessageStore, useUIStore, usePreferencesStore } from "@/lib/store";
+import { VideoGenerator } from "@/components/chat/VideoGenerator";
 import { estimateTokens } from "@/lib/utils";
 
 export default function ChatSessionPage() {
@@ -83,6 +84,18 @@ export default function ChatSessionPage() {
        m.content.toLowerCase().includes("as an ai, i"))
   );
   const disabledMessage = hasForbiddenContent ? "ИИ решила, что вы спрашиваете что-то запрещенное." : undefined;
+  const mode = usePreferencesStore((s) => s.mode);
+
+  if (mode === "video") {
+    return (
+      <PipWrapper pipWindow={pipWindow}>
+        <div className="flex h-full flex-col">
+          <TopBar tokenCount={tokenCount} />
+          <VideoGenerator />
+        </div>
+      </PipWrapper>
+    );
+  }
 
   return (
     <PipWrapper pipWindow={pipWindow}>

@@ -3,7 +3,7 @@
 import { Menu, Zap, PictureInPicture2 } from "lucide-react";
 import { ModelSelector } from "@/components/chat/ModelSelector";
 import { ModeSelector } from "@/components/chat/ModeSelector";
-import { useUIStore } from "@/lib/store";
+import { useAuthStore, useUIStore } from "@/lib/store";
 
 interface TopBarProps {
   tokenCount?: number;
@@ -13,6 +13,11 @@ export function TopBar({ tokenCount }: TopBarProps = {}) {
   const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
   const setPipWindow = useUIStore((s) => s.setPipWindow);
   const pipWindow = useUIStore((s) => s.pipWindow);
+  const user = useAuthStore((s) => s.user);
+
+  const tokensUsed = user?.tokens_used || 0;
+  const tokenLimit = 1000000;
+  const usagePercent = Math.min(100, Math.round((tokensUsed / tokenLimit) * 100));
 
   const openPip = async () => {
     if (!("documentPictureInPicture" in window)) {
@@ -78,12 +83,23 @@ export function TopBar({ tokenCount }: TopBarProps = {}) {
           <ModeSelector />
         </div>
       </div>
-      {tokenCount !== undefined && (
-        <div className="ml-auto flex items-center gap-1.5 rounded-full bg-card px-3 py-1 text-xs font-medium text-text-secondary border border-border">
-          <Zap className="h-3.5 w-3.5 text-accent" />
-          <span>{tokenCount.toLocaleString("ru-RU")} токенов</span>
+      <div className="ml-auto flex items-center gap-2">
+        <div 
+          className="hidden sm:flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs"
+          title="Лимит токенов (месяц)"
+        >
+          <span className="font-medium text-text-secondary">{tokensUsed >= 1000 ? Math.floor(tokensUsed / 1000) + 'K' : tokensUsed} / 1M</span>
+          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-border">
+            <div className="h-full rounded-full bg-text transition-all duration-500" style={{ width: `${usagePercent}%` }} />
+          </div>
         </div>
-      )}
+        {tokenCount !== undefined && (
+          <div className="flex items-center gap-1.5 rounded-full bg-card px-3 py-1 text-xs font-medium text-text-secondary border border-border">
+            <Zap className="h-3.5 w-3.5 text-accent" />
+            <span>{tokenCount.toLocaleString("ru-RU")} токенов</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

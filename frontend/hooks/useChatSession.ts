@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiRequest, ApiError } from "@/lib/api";
-import { usePreferencesStore, useSessionsStore, useToastStore } from "@/lib/store";
+import { useAuthStore, usePreferencesStore, useSessionsStore, useToastStore } from "@/lib/store";
 import type { Attachment, ChatSessionDetail, Message } from "@/lib/types";
 import { ChatSocket } from "@/lib/ws";
 
@@ -83,6 +83,12 @@ export function useChatSession(sessionId: string | null) {
         setIsStreaming(false);
         setIsGenerating(false);
         setMessages((prev) => prev.map((m) => (m.id === STREAMING_ID ? message : m)));
+      },
+      onUsageUpdate: (tokensUsed) => {
+        const authStore = useAuthStore.getState();
+        if (authStore.user) {
+          authStore.setUser({ ...authStore.user, tokens_used: tokensUsed });
+        }
       },
       onError: (message) => {
         setIsStreaming(false);

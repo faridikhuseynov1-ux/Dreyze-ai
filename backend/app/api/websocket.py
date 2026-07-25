@@ -254,12 +254,30 @@ async def _stream_and_save(
         mode=mode,
     )
     db.add(assistant_message)
+    
+    # Calculate tokens (User-friendly counting: only new text)
+    prompt_chars = len(last_user_text)
+    completion_chars = len(accumulated)
+    estimated_tokens = max(1, (prompt_chars + completion_chars) // 4)
+    
+    session_result = await db.execute(select(ChatSession).where(ChatSession.id == session_id))
+    session_obj = session_result.scalar_one()
+    
+    user_result = await db.execute(select(User).where(User.id == session_obj.user_id))
+    current_user = user_result.scalar_one()
+    
+    current_user.tokens_used += estimated_tokens
+
     await db.commit()
     await db.refresh(assistant_message)
 
     event_type = "stopped" if stopped else "done"
     await safe_send_json(
         websocket, {"type": event_type, "message": MessageOut.model_validate(assistant_message).model_dump(mode="json")}
+    )
+    
+    await safe_send_json(
+        websocket, {"type": "usage_update", "tokens_used": current_user.tokens_used}
     )
 
     if not stopped and accumulated:
