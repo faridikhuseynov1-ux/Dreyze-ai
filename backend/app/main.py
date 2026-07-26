@@ -56,7 +56,7 @@ async def security_headers(request: Request, call_next):
 
 
 Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
-# Uploads are no longer served publicly via StaticFiles
+app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 from app.api.routes.tts import router as tts_router
 

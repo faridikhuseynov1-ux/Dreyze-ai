@@ -78,7 +78,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 Таблицы создаются автоматически при старте (`init_db`), миграции не требуются
-для первого запуска. Проверка: `curl http://localhost:8000/api/health`.
+для первого запуска. Проверка: `curl https://dreyzfarid.online/api/health`.
 
 ## 2. Frontend
 
@@ -91,15 +91,15 @@ npm run dev
 Переменные окружения в `frontend/.env.local`:
 
 ```
-NEXT_PUBLIC_API_URL=http://localhost:8000/api
-NEXT_PUBLIC_WS_URL=ws://localhost:8000
+NEXT_PUBLIC_API_URL=https://dreyzfarid.online/api
+NEXT_PUBLIC_WS_URL=wss://dreyzfarid.online
 ```
 
 Для продакшена на `dreyzfarid.online` укажите реальные адреса backend, например:
 
 ```
-NEXT_PUBLIC_API_URL=https://api.dreyzfarid.online/api
-NEXT_PUBLIC_WS_URL=wss://api.dreyzfarid.online
+NEXT_PUBLIC_API_URL=https://dreyzfarid.online/api
+NEXT_PUBLIC_WS_URL=wss://dreyzfarid.online
 ```
 
 и в `backend/.env`:

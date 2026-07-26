@@ -132,11 +132,16 @@ async def stream_completion(
         "X-Title": "Dreyze AI Chat",
     }
 
-    providers = []
-    try:
-        providers = json.loads(settings.AI_PROVIDERS)
-    except Exception:
-        pass
+    providers = settings.ai_providers_list
+    for key in [
+        settings.OPENROUTER_API_KEY,
+        settings.OPENROUTER_API_KEY_FALLBACK_1,
+        settings.OPENROUTER_API_KEY_FALLBACK_2,
+    ]:
+        if key:
+            providers.append({"url": settings.OPENROUTER_BASE_URL, "key": key})
+    if not providers:
+        raise RuntimeError("No AI provider API keys configured")
 
     last_error = None
     has_yielded = False
@@ -184,4 +189,3 @@ async def stream_completion(
             
     if last_error:
         raise RuntimeError(f"Все провайдеры недоступны. Последняя ошибка: {last_error}")
-

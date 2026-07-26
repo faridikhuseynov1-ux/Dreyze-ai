@@ -30,12 +30,13 @@ class SandboxManager:
         # Actually, if we just use a specific port range, we can try until one is free.
         import socket
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(('', 0))
+        preview_host = "0.0.0.0"
+        s.bind((preview_host, 0))
         port = s.getsockname()[1]
         s.close()
         
         server_proc = await asyncio.create_subprocess_exec(
-            "python3", "-m", "http.server", str(port),
+            "python3", "-m", "http.server", str(port), "--bind", preview_host,
             cwd=temp_dir,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
@@ -43,7 +44,7 @@ class SandboxManager:
         
         # Start cloudflared tunnel
         tunnel_proc = await asyncio.create_subprocess_exec(
-            "cloudflared", "tunnel", "--url", f"http://localhost:{port}",
+            "cloudflared", "tunnel", "--url", f"http://{preview_host}:{port}",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )

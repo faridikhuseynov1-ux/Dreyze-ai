@@ -48,7 +48,7 @@ CSRF_COOKIE = "csrf_token"
 
 def _set_auth_cookies(response: Response, refresh_token: str) -> str:
     csrf_token = generate_csrf_token()
-    secure = not settings.FRONTEND_URL.startswith("http://localhost")
+    secure = settings.FRONTEND_URL.startswith("https://")
     response.set_cookie(
         REFRESH_COOKIE,
         refresh_token,

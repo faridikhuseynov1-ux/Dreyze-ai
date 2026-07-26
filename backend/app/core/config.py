@@ -1,3 +1,4 @@
+import json
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -23,8 +24,12 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str
     EMAIL_FROM: str
 
-    # AI Providers
-    AI_PROVIDERS: str = '[]'
+    # AI
+    OPENROUTER_API_KEY: str | None = None
+    OPENROUTER_API_KEY_FALLBACK_1: str | None = None
+    OPENROUTER_API_KEY_FALLBACK_2: str | None = None
+    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    AI_PROVIDERS: str = "[]"
 
     # Uploads
     UPLOAD_DIR: str = "./uploads"
@@ -37,6 +42,33 @@ class Settings(BaseSettings):
     @property
     def allowed_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
+
+    @property
+    def ai_providers_list(self) -> list[dict[str, str]]:
+        if not self.AI_PROVIDERS:
+            return []
+        try:
+            providers = json.loads(self.AI_PROVIDERS)
+        except json.JSONDecodeError:
+            return []
+        return [provider for provider in providers if provider.get("url") and provider.get("key")]
+
+    @property
+    def ai_base_url(self) -> str:
+        providers = self.ai_providers_list
+        if providers and not self.OPENROUTER_API_KEY:
+            return providers[0]["url"].rstrip("/")
+        return self.OPENROUTER_BASE_URL.rstrip("/")
+
+    @property
+    def ai_api_keys(self) -> list[str]:
+        keys = [
+            self.OPENROUTER_API_KEY,
+            self.OPENROUTER_API_KEY_FALLBACK_1,
+            self.OPENROUTER_API_KEY_FALLBACK_2,
+        ]
+        keys.extend(provider["key"] for provider in self.ai_providers_list)
+        return [key for key in keys if key]
 
 
 @lru_cache
