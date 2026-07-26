@@ -28,6 +28,7 @@ export function VoiceModeOverlay({ onClose, onSend, isStreaming, isGenerating, l
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const ttsFallbackTimerRef = useRef<NodeJS.Timeout | null>(null);
   const spokenMessageIdRef = useRef<string | null>(null);
+  const ttsRunIdRef = useRef(0);
   const pushToast = useToastStore((s) => s.push);
   const isStreamingRef = useRef(isStreaming);
   const lastMessageRef = useRef(lastMessage);
@@ -51,20 +52,36 @@ export function VoiceModeOverlay({ onClose, onSend, isStreaming, isGenerating, l
     } catch {}
   }, []);
 
-  const speakWithBrowserTTS = useCallback((text: string) => {
+  const splitSpeechText = useCallback((text: string, maxLength = 420) => {
+    const chunks: string[] = [];
+    for (const sentence of text.split(/(?<=[.!?。！？])\s+|\n{2,}/)) {
+      const words = sentence.trim().split(/\s+/).filter(Boolean);
+      let current = "";
+      for (const word of words) {
+        if (!current) {
+          current = word;
+        } else if (`${current} ${word}`.length <= maxLength) {
+          current = `${current} ${word}`;
+        } else {
+          chunks.push(current);
+          current = word;
+        }
+      }
+      if (current) chunks.push(current);
+    }
+    return chunks.length ? chunks : [text.slice(0, maxLength)];
+  }, []);
+
+  const speakWithBrowserTTS = useCallback((text: string, onDone?: () => void) => {
     if (!synthRef.current) {
-      setVoiceState("listening");
+      onDone?.();
       return;
     }
 
-    const chunks = text
-      .split(/(?<=[.!?。！？])\s+|\n{2,}/)
-      .flatMap((part) => (part.length > 240 ? part.match(/.{1,220}(?:\s|$)/g) || [part] : [part]))
-      .map((part) => part.trim())
-      .filter(Boolean);
+    const chunks = splitSpeechText(text, 260);
 
     if (!chunks.length) {
-      setVoiceState("listening");
+      onDone?.();
       return;
     }
 
@@ -80,20 +97,20 @@ export function VoiceModeOverlay({ onClose, onSend, isStreaming, isGenerating, l
         if (index < chunks.length) {
           speakNext();
         } else {
-          setVoiceState("listening");
+          onDone?.();
         }
       };
       utterance.onerror = () => {
         index += 1;
         if (index < chunks.length) speakNext();
-        else setVoiceState("listening");
+        else onDone?.();
       };
       synthRef.current.speak(utterance);
     };
 
     synthRef.current.cancel();
     speakNext();
-  }, []);
+  }, [splitSpeechText]);
 
   const startListening = useCallback(() => {
     setVoiceState("listening");
@@ -108,8 +125,10 @@ export function VoiceModeOverlay({ onClose, onSend, isStreaming, isGenerating, l
     } catch {}
   }, []);
 
-  const speakText = useCallback((text: string) => {
+  const speakText = useCallback(async (text: string) => {
     if (ttsFallbackTimerRef.current) clearTimeout(ttsFallbackTimerRef.current);
+    const runId = ttsRunIdRef.current + 1;
+    ttsRunIdRef.current = runId;
 
     const noCodeText = text.replace(/```[\s\S]*?```/g, " Код пропущен. ");
     const cleanText = noCodeText
@@ -124,8 +143,53 @@ export function VoiceModeOverlay({ onClose, onSend, isStreaming, isGenerating, l
       return;
     }
 
-    speakWithBrowserTTS(cleanText);
-  }, [speakWithBrowserTTS, startListening]);
+    const chunks = splitSpeechText(cleanText, 420);
+    const finish = () => {
+      if (ttsRunIdRef.current === runId && voiceStateRef.current === "speaking") {
+        startListening();
+      }
+    };
+
+    if (!audioRef.current) {
+      speakWithBrowserTTS(cleanText, finish);
+      return;
+    }
+
+    let failedServerTts = false;
+    for (const chunk of chunks) {
+      if (ttsRunIdRef.current !== runId || voiceStateRef.current !== "speaking") return;
+      try {
+        const audio = audioRef.current;
+        await new Promise<void>((resolve, reject) => {
+          const timeout = window.setTimeout(() => reject(new Error("TTS timeout")), 20000);
+          audio.onended = () => {
+            window.clearTimeout(timeout);
+            resolve();
+          };
+          audio.onerror = () => {
+            window.clearTimeout(timeout);
+            reject(new Error("TTS playback failed"));
+          };
+          audio.src = `/api/tts/?text=${encodeURIComponent(chunk)}`;
+          audio.load();
+          audio.play().catch((error) => {
+            window.clearTimeout(timeout);
+            reject(error);
+          });
+        });
+      } catch {
+        failedServerTts = true;
+        break;
+      }
+    }
+
+    if (failedServerTts && ttsRunIdRef.current === runId && voiceStateRef.current === "speaking") {
+      speakWithBrowserTTS(cleanText, finish);
+      return;
+    }
+
+    finish();
+  }, [speakWithBrowserTTS, splitSpeechText, startListening]);
 
   useEffect(() => {
     if (isGenerating || isStreaming) {
@@ -209,6 +273,7 @@ export function VoiceModeOverlay({ onClose, onSend, isStreaming, isGenerating, l
     setTimeout(startListening, 0);
 
     return () => {
+      ttsRunIdRef.current += 1;
       stopListening();
       if (synthRef.current) synthRef.current.cancel();
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
