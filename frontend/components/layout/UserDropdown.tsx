@@ -17,6 +17,7 @@ interface UserDropdownProps {
 const PLAN_LABELS: Record<string, string> = {
   free: "Free Plan",
   paid: "Paid Plan",
+  pro: "Pro Plan",
   premium: "Premium Plan",
   infinite: "Infinite Plan",
 };

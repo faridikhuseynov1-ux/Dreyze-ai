@@ -17,9 +17,10 @@ export function TopBar({ tokenCount }: TopBarProps = {}) {
 
   const tokensUsed = user?.tokens_used || 0;
   const plan = user?.plan || "free";
-  const tokenLimit = plan === "infinite" ? Infinity : plan === "premium" ? 200000 : plan === "paid" ? 100000 : 1000000;
-  const usagePercent = tokenLimit === Infinity ? 0 : Math.min(100, Math.round((tokensUsed / tokenLimit) * 100));
-  const visibleTokenCount = tokenCount ? `${tokenCount >= 1000 ? Math.floor(tokenCount / 1000) + "K" : tokenCount} в чате` : null;
+  const tokenLimit = plan === "infinite" ? Infinity : plan === "premium" ? 200000 : plan === "paid" || plan === "pro" ? 100000 : null;
+  const usagePercent = tokenLimit && tokenLimit !== Infinity ? Math.min(100, (tokensUsed / tokenLimit) * 100) : 0;
+  const formattedTokensUsed = tokensUsed.toLocaleString("ru-RU");
+  const formattedTokenLimit = tokenLimit === Infinity ? "∞" : tokenLimit?.toLocaleString("ru-RU");
 
   const openPip = async () => {
     if (!("documentPictureInPicture" in window)) {
@@ -86,22 +87,21 @@ export function TopBar({ tokenCount }: TopBarProps = {}) {
         </div>
       </div>
       <div className="ml-auto flex items-center gap-2">
-        {visibleTokenCount && (
-          <span className="hidden rounded-full border border-border bg-card px-3 py-1 text-xs text-text-secondary lg:inline">
-            {visibleTokenCount}
-          </span>
-        )}
-        <div 
-          className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs sm:flex"
-          title="Лимит токенов (месяц)"
-        >
-          <span className="font-medium text-text-secondary">
-            {tokensUsed >= 1000 ? Math.floor(tokensUsed / 1000) + 'K' : tokensUsed} / {plan === "infinite" ? "∞" : plan === "premium" ? "200K" : plan === "paid" ? "100K" : "1M"}
-          </span>
-          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-border">
-            <div className="h-full rounded-full bg-text transition-all duration-500" style={{ width: `${usagePercent}%` }} />
+        {tokenLimit && (
+          <div
+            className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs sm:flex"
+            title="Лимит токенов"
+          >
+            <span className="font-medium text-text-secondary">
+              {formattedTokensUsed} / {formattedTokenLimit}
+            </span>
+            {tokenLimit !== Infinity && (
+              <div className="h-1.5 w-16 overflow-hidden rounded-full bg-border">
+                <div className="h-full rounded-full bg-text transition-all duration-500" style={{ width: `${usagePercent}%` }} />
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

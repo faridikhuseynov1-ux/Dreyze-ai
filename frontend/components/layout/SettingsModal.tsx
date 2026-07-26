@@ -461,16 +461,24 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 </div>
               )}
 
-              {activeTab === "usage" && (
+              {activeTab === "usage" && (() => {
+                const plan = user?.plan || "free";
+                const tokenLimit = plan === "infinite" ? Infinity : plan === "premium" ? 200000 : plan === "paid" || plan === "pro" ? 100000 : null;
+                const usagePercent = tokenLimit && tokenLimit !== Infinity
+                  ? Math.min(100, ((user?.tokens_used || 0) / tokenLimit) * 100)
+                  : 0;
+                const planLabel = plan === "premium" ? "Премиум" : plan === "paid" || plan === "pro" ? "Pro" : plan === "infinite" ? "Infinite" : "Бесплатный";
+
+                return (
                 <div className="space-y-6">
                   <h3 className="text-lg font-medium text-white mb-4">Подписка и Лимиты</h3>
                   <div className="flex flex-col gap-4 mb-6">
                     <p className="text-sm text-text-secondary">Ваш текущий тарифный план: 
                       <span className="font-semibold text-white ml-2">
-                        {user?.plan === "premium" ? "Премиум" : user?.plan === "paid" ? "Платный" : "Бесплатный"}
+                        {planLabel}
                       </span>
                     </p>
-                    {user?.plan === "free" && (
+                    {plan === "free" && (
                       <p className="text-xs text-text-secondary">
                         У вас доступно 10 запросов в день. Для изменения подписки обратитесь к администратору.
                       </p>
@@ -482,22 +490,25 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                         Использовано токенов: {user?.tokens_used?.toLocaleString("ru-RU") || 0}
                       </span>
                       <span className="text-sm font-medium text-text-secondary">
-                        {user?.plan === "free" ? "Безлимит токенов (но 10 запросов/день)" : 
-                         user?.plan === "paid" ? "100 000 лимит" : 
-                         user?.plan === "premium" ? "200 000 лимит" : "1 000 000 лимит"}
+                        {tokenLimit === null
+                          ? "10 запросов в день"
+                          : tokenLimit === Infinity
+                            ? "Безлимит"
+                            : `${tokenLimit.toLocaleString("ru-RU")} лимит`}
                       </span>
                     </div>
-                    {user?.plan !== "free" && (
+                    {tokenLimit && tokenLimit !== Infinity && (
                       <div className="h-2 w-full overflow-hidden rounded-full bg-black/50">
                         <div 
                           className="h-full rounded-full bg-white transition-all duration-500" 
-                          style={{ width: `${Math.min(100, Math.round(((user?.tokens_used || 0) / (user?.plan === "premium" ? 200000 : 100000)) * 100))}%` }} 
+                          style={{ width: `${usagePercent}%` }} 
                         />
                       </div>
                     )}
                   </div>
                 </div>
-              )}
+                );
+              })()}
 
               {activeTab === "danger" && (
                 <div className="space-y-6">

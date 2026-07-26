@@ -152,7 +152,7 @@ async def _handle_send(websocket: WebSocket, connection_id: str, session_id: uui
             return
 
         token_limit = 1000000
-        if plan == "paid":
+        if plan in ("paid", "pro"):
             token_limit = 100000
         elif plan == "premium":
             token_limit = 200000
@@ -258,7 +258,7 @@ async def _handle_regenerate(websocket: WebSocket, connection_id: str, session_i
             return
 
         token_limit = 1000000
-        if plan == "paid":
+        if plan in ("paid", "pro"):
             token_limit = 100000
         elif plan == "premium":
             token_limit = 200000
