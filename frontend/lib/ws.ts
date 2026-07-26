@@ -70,7 +70,17 @@ export class ChatSocket {
       }
     };
 
-    this.ws.onclose = () => this.handlers.onClose?.();
+    this.ws.onerror = () => {
+      this.handlers.onError("Не удалось подключиться к AI. Обновите страницу и попробуйте еще раз.");
+    };
+
+    this.ws.onclose = (event) => {
+      if (!event.wasClean && this.queue.length > 0) {
+        this.handlers.onError("Соединение с AI закрылось до отправки сообщения.");
+        this.queue = [];
+      }
+      this.handlers.onClose?.();
+    };
   }
 
   private sendRaw(payload: object) {

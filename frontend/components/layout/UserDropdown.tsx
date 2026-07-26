@@ -14,6 +14,13 @@ interface UserDropdownProps {
   onLogout: () => void;
 }
 
+const PLAN_LABELS: Record<string, string> = {
+  free: "Free Plan",
+  paid: "Paid Plan",
+  premium: "Premium Plan",
+  infinite: "Infinite Plan",
+};
+
 export function UserDropdown({ onOpenProfile, onOpenSettings, onLogout }: UserDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -71,7 +78,9 @@ export function UserDropdown({ onOpenProfile, onOpenSettings, onLogout }: UserDr
               )}
               <div className="flex flex-col min-w-0">
                 <span className="truncate text-sm font-medium text-white">{user?.name}</span>
-                <span className="text-xs text-text-secondary">Free Plan</span>
+                <span className="text-xs text-text-secondary">
+                  {PLAN_LABELS[user?.plan || "free"] || `${user?.plan} Plan`}
+                </span>
               </div>
             </div>
 
