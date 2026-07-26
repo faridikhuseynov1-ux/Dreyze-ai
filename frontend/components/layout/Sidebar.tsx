@@ -37,7 +37,7 @@ import {
 import type { ChatSession, SearchResult } from "@/lib/types";
 import { cn, formatRelativeTime } from "@/lib/utils";
 
-const FOLDER_COLORS = ["#111827", "#374151", "#4b5563", "#6b7280", "#9ca3af", "#d1d5db"];
+const FOLDER_COLORS = ["#ef4444", "#2563eb", "#22c55e", "#f59e0b", "#a855f7", "#ec4899", "#06b6d4", "#ffffff"];
 
 export function Sidebar() {
   const router = useRouter();
@@ -348,7 +348,7 @@ export function Sidebar() {
       </div>
 
       {isCreatingFolder && (
-        <form onSubmit={handleCreateFolderSubmit} className="mx-4 mb-3 rounded-2xl border border-border bg-bg p-3">
+        <form onSubmit={handleCreateFolderSubmit} className="mx-4 mb-3 rounded-xl border border-border bg-bg p-3">
           <p className="text-xs font-semibold text-text mb-2">Новая папка</p>
           <input
             autoFocus
@@ -357,32 +357,32 @@ export function Sidebar() {
             placeholder="Название папки"
             className="w-full rounded-xl border border-border bg-card px-3 py-1.5 text-xs text-text outline-none focus:border-accent"
           />
-          <div className="mt-2 flex items-center justify-between">
-            <div className="flex gap-1">
+          <div className="mt-3 flex flex-col gap-3">
+            <div className="grid grid-cols-8 gap-1.5">
               {FOLDER_COLORS.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setNewFolderColor(c)}
                   className={cn(
-                    "h-4 w-4 rounded-full transition-transform",
-                    newFolderColor === c && "scale-125 ring-2 ring-white"
+                    "h-5 w-5 rounded-full border border-border transition-transform",
+                    newFolderColor === c && "scale-110 ring-2 ring-text"
                   )}
                   style={{ backgroundColor: c }}
                 />
               ))}
             </div>
-            <div className="flex gap-1">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setIsCreatingFolder(false)}
-                className="rounded-lg px-2 py-1 text-xs text-text-secondary hover:text-text"
+                className="min-w-0 rounded-lg px-2 py-2 text-xs text-text-secondary hover:bg-card-hover hover:text-text"
               >
                 Отмена
               </button>
               <button
                 type="submit"
-                className="rounded-lg bg-text px-2 py-1 text-xs font-medium text-bg hover:opacity-90"
+                className="min-w-0 rounded-lg bg-text px-2 py-2 text-xs font-medium text-bg hover:opacity-90"
               >
                 Создать
               </button>

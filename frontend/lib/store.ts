@@ -26,11 +26,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "dreyz-ai-auth",
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          state.setHydrated(true);
-        }
-      },
+      partialize: (state) => ({ accessToken: state.accessToken, user: state.user }),
     }
   )
 );
@@ -122,7 +118,7 @@ export const useFolderStore = create<FolderState>((set) => ({
       /* ignore endpoint errors */
     }
   },
-  createFolder: async (name: string, color = "#111827") => {
+  createFolder: async (name: string, color = "#ef4444") => {
     try {
       const folder = await apiRequest<Folder>("/folders", {
         method: "POST",

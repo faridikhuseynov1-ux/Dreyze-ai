@@ -9,10 +9,11 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const hydrated = useAuthStore((s) => s.hydrated);
   const user = useAuthStore((s) => s.user);
+  const accessToken = useAuthStore((s) => s.accessToken);
 
   useEffect(() => {
-    if (hydrated && !user) router.replace("/login");
-  }, [hydrated, user, router]);
+    if (hydrated && !user && !accessToken) router.replace("/login");
+  }, [hydrated, user, accessToken, router]);
 
   if (!hydrated || !user) {
     return (
