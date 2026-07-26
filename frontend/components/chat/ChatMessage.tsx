@@ -279,6 +279,7 @@ function ChatMessageComponent({ message, userName, onEdit, onDelete, onRegenerat
                   const codeId = `${message.id}-${lang}-${rawCode.slice(0, 10)}`;
                   const isCopied = copiedCodeId === codeId;
                   const isPreviewable = ["html", "jsx", "tsx", "js", "javascript", "react", "css"].includes(lang.toLowerCase());
+                  const isDiff = ["diff", "patch"].includes(lang.toLowerCase());
 
                   return (
                     <div className="my-3 overflow-hidden rounded-2xl border border-border bg-card">
@@ -313,11 +314,34 @@ function ChatMessageComponent({ message, userName, onEdit, onDelete, onRegenerat
                           </button>
                         </div>
                       </div>
-                      <div className="max-w-full overflow-x-auto p-3 text-xs font-mono sm:p-4">
-                        <code className={className} {...props}>
-                          {children}
-                        </code>
-                      </div>
+                      {isDiff ? (
+                        <div className="max-w-full overflow-x-auto py-3 text-xs font-mono sm:py-4">
+                          {rawCode.split("\n").map((line, index) => {
+                            const added = line.startsWith("+") && !line.startsWith("+++");
+                            const removed = line.startsWith("-") && !line.startsWith("---");
+                            const meta = line.startsWith("@@") || line.startsWith("diff ") || line.startsWith("index ");
+                            return (
+                              <div
+                                key={`${index}-${line}`}
+                                className={cn(
+                                  "min-w-max whitespace-pre px-3 sm:px-4",
+                                  added && "bg-green-500/12 text-green-300",
+                                  removed && "bg-red-500/12 text-red-300",
+                                  meta && "bg-card-hover text-text-secondary"
+                                )}
+                              >
+                                {line || " "}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="max-w-full overflow-x-auto p-3 text-xs font-mono sm:p-4">
+                          <code className={className} {...props}>
+                            {children}
+                          </code>
+                        </div>
+                      )}
                     </div>
                   );
                 },

@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Mic, MicOff, Volume2 } from "lucide-react";
 import type { Message } from "@/lib/types";
@@ -27,6 +27,7 @@ export function VoiceModeOverlay({ onClose, onSend, isStreaming, isGenerating, l
   const transcriptRef = useRef("");
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const ttsFallbackTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const spokenMessageIdRef = useRef<string | null>(null);
   const pushToast = useToastStore((s) => s.push);
   const isStreamingRef = useRef(isStreaming);
   const lastMessageRef = useRef(lastMessage);
@@ -40,23 +41,113 @@ export function VoiceModeOverlay({ onClose, onSend, isStreaming, isGenerating, l
     voiceStateRef.current = voiceState;
   }, [voiceState]);
 
-  // Handle transitions
+  const stopListening = useCallback(() => {
+    try {
+      if (recognitionRef.current) recognitionRef.current.stop();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    } catch {}
+  }, []);
+
+  const speakWithBrowserTTS = useCallback((text: string) => {
+    if (!synthRef.current) {
+      setVoiceState("listening");
+      return;
+    }
+
+    const chunks = text
+      .split(/(?<=[.!?。！？])\s+|\n{2,}/)
+      .flatMap((part) => (part.length > 240 ? part.match(/.{1,220}(?:\s|$)/g) || [part] : [part]))
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    if (!chunks.length) {
+      setVoiceState("listening");
+      return;
+    }
+
+    let index = 0;
+    const speakNext = () => {
+      if (!synthRef.current || voiceStateRef.current !== "speaking") return;
+      const utterance = new SpeechSynthesisUtterance(chunks[index]);
+      utterance.lang = "ru-RU";
+      utterance.rate = 1.12;
+      utterance.pitch = 1;
+      utterance.onend = () => {
+        index += 1;
+        if (index < chunks.length) {
+          speakNext();
+        } else {
+          setVoiceState("listening");
+        }
+      };
+      utterance.onerror = () => {
+        index += 1;
+        if (index < chunks.length) speakNext();
+        else setVoiceState("listening");
+      };
+      synthRef.current.speak(utterance);
+    };
+
+    synthRef.current.cancel();
+    speakNext();
+  }, []);
+
+  const startListening = useCallback(() => {
+    setVoiceState("listening");
+    if (ttsFallbackTimerRef.current) clearTimeout(ttsFallbackTimerRef.current);
+    if (synthRef.current) synthRef.current.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    try {
+      if (recognitionRef.current) recognitionRef.current.start();
+    } catch {}
+  }, []);
+
+  const speakText = useCallback((text: string) => {
+    if (ttsFallbackTimerRef.current) clearTimeout(ttsFallbackTimerRef.current);
+
+    const noCodeText = text.replace(/```[\s\S]*?```/g, " Код пропущен. ");
+    const cleanText = noCodeText
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/[#*_~>\[\]]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (!cleanText) {
+      startListening();
+      return;
+    }
+
+    speakWithBrowserTTS(cleanText);
+  }, [speakWithBrowserTTS, startListening]);
+
   useEffect(() => {
     if (isGenerating || isStreaming) {
-      if (voiceState === "listening" || voiceState === "idle") {
+      if (voiceStateRef.current === "listening" || voiceStateRef.current === "idle") {
         setVoiceState("thinking");
         stopListening();
       }
-    } else if (voiceState === "thinking" && !isStreaming && !isGenerating) {
-      // Just finished generating, we need to speak!
-      if (lastMessage?.role === "assistant") {
-        setVoiceState("speaking");
-        speakText(lastMessage.content);
-      } else {
-        startListening();
-      }
+      return;
     }
-  }, [isStreaming, isGenerating, lastMessage?.id]);
+
+    if (voiceStateRef.current === "thinking" && lastMessage?.role === "assistant") {
+      if (spokenMessageIdRef.current === lastMessage.id) return;
+      spokenMessageIdRef.current = lastMessage.id;
+      setVoiceState("speaking");
+      speakText(lastMessage.content);
+      return;
+    }
+
+    if (voiceStateRef.current === "thinking") {
+      startListening();
+    }
+  }, [isStreaming, isGenerating, lastMessage?.id, lastMessage?.role, lastMessage?.content, speakText, startListening, stopListening]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -115,7 +206,7 @@ export function VoiceModeOverlay({ onClose, onSend, isStreaming, isGenerating, l
       }
     }
 
-    startListening();
+    setTimeout(startListening, 0);
 
     return () => {
       stopListening();
@@ -124,86 +215,6 @@ export function VoiceModeOverlay({ onClose, onSend, isStreaming, isGenerating, l
       if (ttsFallbackTimerRef.current) clearTimeout(ttsFallbackTimerRef.current);
     };
   }, []);
-
-  const startListening = () => {
-    setVoiceState("listening");
-    if (ttsFallbackTimerRef.current) clearTimeout(ttsFallbackTimerRef.current);
-    if (synthRef.current) synthRef.current.cancel();
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-    try {
-      if (recognitionRef.current) recognitionRef.current.start();
-    } catch {}
-  };
-
-  const stopListening = () => {
-    try {
-      if (recognitionRef.current) recognitionRef.current.stop();
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-    } catch {}
-  };
-
-  const speakText = async (text: string) => {
-    if (ttsFallbackTimerRef.current) clearTimeout(ttsFallbackTimerRef.current);
-    
-    // Clean code blocks and markdown completely
-    const noCodeText = text.replace(/```[\s\S]*?```/g, " [Код пропущен] ");
-    const cleanText = noCodeText.replace(/[#*_~`\[\]]/g, "").trim();
-    
-    if (!cleanText) {
-      startListening();
-      return;
-    }
-
-    try {
-      if (audioRef.current) {
-        // Use streaming GET request for zero-delay playback
-        const slicedText = cleanText.length > 1500 ? cleanText.slice(0, 1500) + "..." : cleanText;
-        const url = `/api/tts?text=${encodeURIComponent(slicedText)}`;
-        
-        audioRef.current.src = url;
-        audioRef.current.onended = () => {
-          startListening();
-        };
-        audioRef.current.onerror = () => {
-          console.error("Audio playback error, falling back to browser TTS");
-          fallbackTTS(cleanText);
-        };
-        
-        // Safety fallback timer starting ONLY after play begins
-        audioRef.current.onplay = () => {
-          const estimatedDuration = Math.max(5000, slicedText.length * 90);
-          ttsFallbackTimerRef.current = setTimeout(() => {
-            if (voiceStateRef.current === "speaking") startListening();
-          }, estimatedDuration);
-        };
-
-        await audioRef.current.play();
-      } else {
-        fallbackTTS(cleanText);
-      }
-    } catch (err) {
-      fallbackTTS(cleanText);
-    }
-  };
-
-  const fallbackTTS = (text: string) => {
-    if (!synthRef.current) {
-      startListening();
-      return;
-    }
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "ru-RU";
-    utterance.rate = 1.1;
-    utterance.onend = () => startListening();
-    utterance.onerror = () => startListening();
-    synthRef.current.speak(utterance);
-  };
 
   const toggleManual = () => {
     if (voiceState === "listening") {

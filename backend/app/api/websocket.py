@@ -1,4 +1,4 @@
-from app.services.search_service import search_duckduckgo, format_search_results
+from app.services.search_service import extract_urls, format_read_pages, format_search_results, read_pages, search_duckduckgo
 import asyncio
 import uuid
 
@@ -176,11 +176,22 @@ async def _handle_send(websocket: WebSocket, connection_id: str, session_id: uui
         if user_settings and getattr(user_settings, "github_token", None):
             system_prompt += "\n\n[ИНТЕГРАЦИЯ С GITHUB]\nПользователь подключил свой GitHub аккаунт. Ты можешь отправлять код в его репозитории.\nЧтобы выполнить Push, выведи блок кода с языком `github` и содержимым в формате JSON:\n```github\n{\n  \"action\": \"push\",\n  \"repo\": \"username/repo\",\n  \"message\": \"Commit message\",\n  \"files\": [\n    {\"path\": \"file.js\", \"content\": \"console.log('hi');\"}\n  ]\n}\n```\nФронтенд перехватит этот блок кода и выполнит реальный запрос к GitHub API."
 
+        urls = extract_urls(content)
+        if urls:
+            pages = await read_pages(urls)
+            if pages:
+                system_prompt += f"\n\n[ПРОЧИТАННЫЕ СТРАНИЦЫ ПО ССЫЛКАМ]\nПользователь дал ссылки. Используй содержимое этих страниц как основной источник и цитируй URL, когда ссылаешься на факты.\n\n{format_read_pages(pages)}"
+
         if mode == "research":
-            search_results = await search_duckduckgo(content)
+            search_results = await search_duckduckgo(content, max_results=6)
             if search_results:
                 search_text = format_search_results(content, search_results)
-                system_prompt += f"\n\n[РЕЗУЛЬТАТЫ ВЕБ-ПОИСКА В РЕАЛЬНОМ ВРЕМЕНИ]\nАгент поиска только что нашел эту информацию в интернете специально для этого запроса. Обязательно используй ее в ответе и НИ В КОЕМ СЛУЧАЕ не говори, что у тебя нет доступа к интернету. Ты МОЖЕШЬ искать информацию.\n\n{search_text}"
+                result_urls = [item.get("link", "") for item in search_results if item.get("link")]
+                result_pages = await read_pages(result_urls)
+                page_text = format_read_pages(result_pages)
+                system_prompt += f"\n\n[РЕЗУЛЬТАТЫ ВЕБ-ПОИСКА В РЕАЛЬНОМ ВРЕМЕНИ]\nАгент поиска нашел информацию в интернете специально для этого запроса. Используй результаты и прочитанные страницы, указывай ссылки на источники. Не говори, что у тебя нет доступа к интернету.\n\n{search_text}"
+                if page_text:
+                    system_prompt += f"\n\n[ПРОЧИТАННЫЕ СТРАНИЦЫ ИЗ ПОИСКА]\n{page_text}"
             else:
                 system_prompt += "\n\n[РЕЖИМ ПОИСКА]\nТы находишься в режиме веб-поиска. К сожалению, внутренний поисковик (DuckDuckGo) не нашел результатов по текущему запросу пользователя (или запрос был ссылкой, которую поисковик не может прочитать напрямую). Вежливо скажи пользователю: 'Я попытался найти эту информацию в сети, но поисковик не выдал точных результатов. Попробуйте переформулировать запрос (поиск по ключевым словам работает лучше, чем прямые ссылки).' НИ В КОЕМ СЛУЧАЕ не пиши, что у тебя нет доступа к интернету, так как доступ у тебя ЕСТЬ, просто текущий поисковый запрос не дал результатов."
 
@@ -284,11 +295,22 @@ async def _handle_regenerate(websocket: WebSocket, connection_id: str, session_i
 
         last_user_text = preceding[-1].content if preceding else ""
 
+        urls = extract_urls(last_user_text)
+        if urls:
+            pages = await read_pages(urls)
+            if pages:
+                system_prompt += f"\n\n[ПРОЧИТАННЫЕ СТРАНИЦЫ ПО ССЫЛКАМ]\nПользователь дал ссылки. Используй содержимое этих страниц как основной источник и цитируй URL, когда ссылаешься на факты.\n\n{format_read_pages(pages)}"
+
         if mode == "research":
             search_results = await search_duckduckgo(last_user_text)
             if search_results:
                 search_text = format_search_results(last_user_text, search_results)
-                system_prompt += f"\n\n[РЕЗУЛЬТАТЫ ВЕБ-ПОИСКА В РЕАЛЬНОМ ВРЕМЕНИ]\nАгент поиска только что нашел эту информацию в интернете специально для этого запроса. Обязательно используй ее в ответе и НИ В КОЕМ СЛУЧАЕ не говори, что у тебя нет доступа к интернету. Ты МОЖЕШЬ искать информацию.\n\n{search_text}"
+                result_urls = [item.get("link", "") for item in search_results if item.get("link")]
+                result_pages = await read_pages(result_urls)
+                page_text = format_read_pages(result_pages)
+                system_prompt += f"\n\n[РЕЗУЛЬТАТЫ ВЕБ-ПОИСКА В РЕАЛЬНОМ ВРЕМЕНИ]\nАгент поиска нашел информацию в интернете специально для этого запроса. Используй результаты и прочитанные страницы, указывай ссылки на источники. Не говори, что у тебя нет доступа к интернету.\n\n{search_text}"
+                if page_text:
+                    system_prompt += f"\n\n[ПРОЧИТАННЫЕ СТРАНИЦЫ ИЗ ПОИСКА]\n{page_text}"
             else:
                 system_prompt += "\n\n[РЕЖИМ ПОИСКА]\nТы находишься в режиме веб-поиска. К сожалению, внутренний поисковик (DuckDuckGo) не нашел результатов по текущему запросу пользователя (или запрос был ссылкой, которую поисковик не может прочитать напрямую). Вежливо скажи пользователю: 'Я попытался найти эту информацию в сети, но поисковик не выдал точных результатов. Попробуйте переформулировать запрос (поиск по ключевым словам работает лучше, чем прямые ссылки).' НИ В КОЕМ СЛУЧАЕ не пиши, что у тебя нет доступа к интернету, так как доступ у тебя ЕСТЬ, просто текущий поисковый запрос не дал результатов."
 
