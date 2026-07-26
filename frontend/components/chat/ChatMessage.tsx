@@ -128,7 +128,7 @@ export function ChatMessage({ message, userName, onEdit, onDelete, onRegenerate,
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
-      className={cn("group flex w-full", compactMode ? "gap-2 px-3 py-1.5" : "gap-3 px-4 py-3", isUser ? "justify-end" : "justify-start")}
+      className={cn("group flex w-full min-w-0", compactMode ? "gap-2 px-3 py-1.5" : "gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3", isUser ? "justify-end" : "justify-start")}
     >
       {!isUser && (
         <div className={cn("mt-1 flex shrink-0 items-center justify-center rounded-full bg-white p-1", compactMode ? "h-6 w-6" : "h-7 w-7")}>
@@ -136,7 +136,7 @@ export function ChatMessage({ message, userName, onEdit, onDelete, onRegenerate,
         </div>
       )}
 
-      <div className={cn("flex w-full flex-col gap-1.5", isUser ? "max-w-[85%] sm:max-w-[75%] items-end" : "w-full")}>
+      <div className={cn("flex min-w-0 flex-col gap-1.5", isUser ? "max-w-[88%] items-end sm:max-w-[75%]" : "w-full")}>
         {message.is_pinned && (
           <div className="flex items-center gap-1 text-[10px] uppercase text-text-secondary font-semibold ml-2">
             <Pin className="h-3 w-3" /> Закреплено
@@ -165,8 +165,8 @@ export function ChatMessage({ message, userName, onEdit, onDelete, onRegenerate,
             className={cn(
               compactMode ? "prose-chat prose-compact text-xs" : "prose-chat text-sm",
               isUser 
-                ? (compactMode ? "px-3.5 py-2 text-xs rounded-2xl bg-user-bubble text-text" : "px-5 py-3 text-sm rounded-3xl bg-user-bubble text-text") 
-                : "text-text w-full py-1"
+                ? (compactMode ? "px-3.5 py-2 text-xs rounded-2xl bg-user-bubble text-text shadow-sm" : "px-4 py-2 sm:px-5 sm:py-3 text-sm rounded-3xl bg-user-bubble text-text shadow-sm") 
+                : "text-text w-full min-w-0 py-1"
             )}
           >
             {message.attachments && message.attachments.length > 0 && (
@@ -313,7 +313,7 @@ export function ChatMessage({ message, userName, onEdit, onDelete, onRegenerate,
                           </button>
                         </div>
                       </div>
-                      <div className="overflow-x-auto p-4 text-xs font-mono">
+                      <div className="max-w-full overflow-x-auto p-3 text-xs font-mono sm:p-4">
                         <code className={className} {...props}>
                           {children}
                         </code>
@@ -330,7 +330,7 @@ export function ChatMessage({ message, userName, onEdit, onDelete, onRegenerate,
         )}
 
         {!editing && (
-          <div className="flex items-center gap-1 text-text-secondary opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="flex flex-wrap items-center gap-1 text-text-secondary opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
             <button onClick={handleCopy} className="rounded-lg p-1.5 hover:bg-card hover:text-text" title="Копировать">
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             </button>

@@ -10,13 +10,13 @@ export function EmptyState() {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-1 flex-col items-center justify-center gap-4 px-4 text-center"
+      className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-8 text-center"
     >
       <Image src="/logo.png" alt="Dreyze AI" width={72} height={72} className="h-16 w-16 object-contain" priority />
-      <h1 className="text-2xl font-semibold text-text">
+      <h1 className="max-w-xl text-2xl font-semibold tracking-tight text-text sm:text-3xl">
         {user ? `С чем помочь, ${user.name.split(" ")[0]}?` : "С чем вам помочь?"}
       </h1>
-      <p className="max-w-md text-sm text-text-secondary">
+      <p className="max-w-md text-sm leading-6 text-text-secondary">
         Выберите модель и режим сверху, прикрепите файлы или изображения и начните разговор.
       </p>
     </motion.div>

@@ -1,8 +1,8 @@
 "use client";
 
+import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export interface DropdownOption<T extends string> {
@@ -10,6 +10,7 @@ export interface DropdownOption<T extends string> {
   label: string;
   description?: string;
   icon?: React.ReactNode;
+  badge?: React.ReactNode;
 }
 
 export function Dropdown<T extends string>({
@@ -68,6 +69,7 @@ export function Dropdown<T extends string>({
                 <span className="flex items-center gap-2 font-medium text-text">
                   {option.icon}
                   {option.label}
+                  {option.badge}
                 </span>
                 {option.description && <span className="text-xs text-text-secondary">{option.description}</span>}
               </button>

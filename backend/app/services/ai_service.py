@@ -13,10 +13,46 @@ Mode = Literal["fast", "smart", "reasoning", "research", "vision"]
 # Model families are resolved to concrete OpenRouter ids per selected mode.
 MODEL_CATALOG: dict[str, dict[str, str]] = {
     "claude": {
-        "default": "opus 4.5",
-        "fast": "sonnet 4.5",
-        "reasoning": "sonnet 4.5",
-        "vision": "opus 4.5",
+        "default": "cc/claude-opus-4-6",
+        "fast": "cc/claude-sonnet-4-6",
+        "reasoning": "cc/claude-sonnet-4-6",
+        "vision": "cc/claude-opus-4-6",
+    },
+    "qwen": {
+        "default": "am/qwen3.6-35b-a3b",
+        "fast": "am/qwen3.6-35b-a3b",
+        "reasoning": "am/qwen3.6-35b-a3b",
+        "vision": "am/qwen3.6-35b-a3b",
+    },
+    "deepseek": {
+        "default": "am/deepseek-v4-pro",
+        "fast": "am/deepseek-v4-pro",
+        "reasoning": "am/deepseek-v4-pro",
+        "vision": "am/deepseek-v4-pro",
+    },
+    "glm": {
+        "default": "glm/glm-5.1",
+        "fast": "glm/glm-5.1",
+        "reasoning": "glm/glm-5.1",
+        "vision": "glm/glm-5.1",
+    },
+    "grok": {
+        "default": "xai/grok-4",
+        "fast": "xai/grok-4",
+        "reasoning": "xai/grok-4",
+        "vision": "xai/grok-4",
+    },
+    "gemini": {
+        "default": "gc/gemini-2.5-pro",
+        "fast": "gc/gemini-2.5-pro",
+        "reasoning": "gc/gemini-2.5-pro",
+        "vision": "gc/gemini-2.5-pro",
+    },
+    "gpt": {
+        "default": "cx/gpt-5.2-pro-2025-12-11",
+        "fast": "cx/gpt-5.2-pro-2025-12-11",
+        "reasoning": "cx/gpt-5.2-pro-2025-12-11",
+        "vision": "cx/gpt-5.2-pro-2025-12-11",
     }
 }
 
@@ -103,6 +139,7 @@ async def stream_completion(
         pass
 
     last_error = None
+    has_yielded = False
     for provider in providers:
         api_url = provider.get("url", "https://api.vibecode-claude.online/v1")
         if not api_url.endswith("/v1") and not api_url.endswith("/chat/completions"):
@@ -118,7 +155,7 @@ async def stream_completion(
                     if response.status_code != 200:
                         error_body = await response.aread()
                         last_error = f"Error {response.status_code} from {api_url}: {error_body.decode(errors='ignore')}"
-                        if response.status_code in (429, 401, 403, 402, 529):
+                        if response.status_code in (429, 401, 403, 402, 529, 500, 502, 503, 504):
                             continue # Try next provider
                         else:
                             raise RuntimeError(last_error)
@@ -136,12 +173,15 @@ async def stream_completion(
                         delta = chunk.get("choices", [{}])[0].get("delta", {})
                         content = delta.get("content")
                         if content:
+                            has_yielded = True
                             yield content
                     return # Exit the function after a successful stream
         except Exception as e:
+            if has_yielded:
+                raise RuntimeError(f"Поток прерван (ошибка провайдера: {e})")
             last_error = str(e)
             continue
             
     if last_error:
-        raise RuntimeError(f"All AI providers failed. Last error: {last_error}")
+        raise RuntimeError(f"Все провайдеры недоступны. Последняя ошибка: {last_error}")
 

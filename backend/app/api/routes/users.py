@@ -26,6 +26,7 @@ from app.schemas.user import (
     UserOut,
     GithubOut,
     UpdateGithubRequest,
+    AdminPlanUpdateRequest,
 )
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -66,6 +67,27 @@ async def update_profile(
     await db.commit()
     await db.refresh(user)
     return user
+
+
+@router.post("/admin/plan/{email}", response_model=UserOut)
+async def admin_update_plan(
+    email: str,
+    payload: AdminPlanUpdateRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if not user.is_admin and user.email != "faridikhuseynov1@gmail.com":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only admins can change plans")
+    
+    target_user_result = await db.execute(select(User).where(User.email == email))
+    target_user = target_user_result.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+        
+    target_user.plan = payload.plan
+    await db.commit()
+    await db.refresh(target_user)
+    return target_user
 
 
 @router.post("/me/password")

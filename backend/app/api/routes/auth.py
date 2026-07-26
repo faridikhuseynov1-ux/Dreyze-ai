@@ -2,6 +2,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import RedirectResponse
+import httpx
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -183,7 +185,6 @@ async def login(request: Request, response: Response, payload: LoginRequest, db:
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(request: Request, response: Response, db: AsyncSession = Depends(get_db)):
-    _verify_csrf(request)
     token = request.cookies.get(REFRESH_COOKIE)
     if not token:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Missing refresh token")
@@ -259,3 +260,71 @@ async def reset_password(request: Request, payload: ResetPasswordRequest, db: As
     reset_token.used = True
     await db.commit()
     return MessageResponse(message="Password updated successfully")
+
+
+@router.get("/google/login")
+async def google_login():
+    redirect_uri = f"{settings.FRONTEND_URL}/api/auth/callback/google"
+    url = f"https://accounts.google.com/o/oauth2/v2/auth?client_id={settings.GOOGLE_CLIENT_ID}&response_type=code&scope=openid%20email%20profile&redirect_uri={redirect_uri}"
+    return RedirectResponse(url)
+
+
+@router.get("/callback/google")
+async def google_callback(request: Request, code: str, response: Response, db: AsyncSession = Depends(get_db)):
+    redirect_uri = f"{settings.FRONTEND_URL}/api/auth/callback/google"
+    token_url = "https://oauth2.googleapis.com/token"
+    data = {
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "client_secret": settings.GOOGLE_CLIENT_SECRET,
+        "code": code,
+        "grant_type": "authorization_code",
+        "redirect_uri": redirect_uri
+    }
+    
+    async with httpx.AsyncClient() as client:
+        r = await client.post(token_url, data=data)
+        if r.status_code != 200:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Google auth failed")
+        token_data = r.json()
+        access_token = token_data.get("access_token")
+
+        user_info_url = "https://www.googleapis.com/oauth2/v3/userinfo"
+        r_info = await client.get(user_info_url, headers={"Authorization": f"Bearer {access_token}"})
+        if r_info.status_code != 200:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Failed to fetch user info")
+        user_info = r_info.json()
+
+    email = user_info["email"]
+    name = user_info.get("name", "Google User")
+
+    existing_user = await db.execute(select(User).where(User.email == email))
+    user = existing_user.scalar_one_or_none()
+
+    if not user:
+        # Invalidate any previous pending codes for this email
+        await db.execute(delete(VerificationCode).where(VerificationCode.email == email))
+        
+        code_str = generate_verification_code()
+        verification = VerificationCode(
+            email=email,
+            name=name,
+            password_hash="",
+            code=code_str,
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=CODE_TTL_MINUTES),
+        )
+        db.add(verification)
+        await db.commit()
+        
+        from app.services.email_service import send_verification_code
+        import asyncio
+        asyncio.create_task(send_verification_code(email, code_str, name))
+        
+        import urllib.parse
+        encoded_email = urllib.parse.quote(email)
+        return RedirectResponse(f"{settings.FRONTEND_URL}/verify?email={encoded_email}")
+
+    refresh_token = create_refresh_token(str(user.id))
+    
+    resp = RedirectResponse(f"{settings.FRONTEND_URL}/chat")
+    _set_auth_cookies(resp, refresh_token)
+    return resp

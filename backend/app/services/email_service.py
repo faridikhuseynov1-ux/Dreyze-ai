@@ -174,3 +174,35 @@ async def send_password_reset(email: str, reset_url: str) -> None:
             ),
         },
     )
+
+async def send_welcome_email(email: str, name: str) -> None:
+    body = f"""
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td align="center" style="color:#c9c9c9; font-size:14px; line-height:1.6; padding-bottom:24px;">
+            Добро пожаловать в Dreyze AI, {name}! Ваш аккаунт успешно создан.
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding-bottom:20px;">
+            <a href="{settings.FRONTEND_URL}/chat" class="btn" style="display:inline-block; background:#ffffff; color:#000000;
+                      font-weight:600; font-size:14px; padding:14px 28px; border-radius:9999px;">
+              Перейти в чат
+            </a>
+          </td>
+        </tr>
+      </table>
+    """
+    await asyncio.to_thread(
+        resend.Emails.send,
+        {
+            "from": settings.EMAIL_FROM,
+            "to": [email],
+            "subject": "Добро пожаловать в Dreyze AI",
+            "html": _base_email(
+                "Ваш аккаунт успешно создан",
+                "Успешная регистрация",
+                body,
+            ),
+        },
+    )

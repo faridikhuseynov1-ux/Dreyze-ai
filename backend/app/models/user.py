@@ -19,7 +19,11 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     tokens_used: Mapped[int] = mapped_column(default=0)
-
+    plan: Mapped[str] = mapped_column(String(20), default="free")
+    requests_today: Mapped[int] = mapped_column(default=0)
+    last_request_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    is_admin: Mapped[bool] = mapped_column(default=False)
+    last_token_reset_week: Mapped[str | None] = mapped_column(String(10), nullable=True)
     chat_sessions: Mapped[list["ChatSession"]] = relationship(  # noqa: F821
         back_populates="user", cascade="all, delete-orphan"
     )

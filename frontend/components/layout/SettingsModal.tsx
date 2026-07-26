@@ -138,7 +138,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     try {
       await apiRequest("/users/me/instructions", {
         method: "PUT",
-        body: JSON.stringify({ instructions_about_me: aboutMe, instructions_response_style: responseStyle }),
+        body: JSON.stringify({ 
+          instructions_about_me: aboutMe, 
+          instructions_response_style: responseStyle
+        }),
       });
       pushToast("Инструкции сохранены", "success");
     } catch (err) {
@@ -209,6 +212,19 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
       pushToast(err instanceof ApiError ? err.message : "Не удалось сохранить токен", "error");
     } finally {
       setSavingGithub(false);
+    }
+  }
+
+  async function handleUpdatePlan(plan: string) {
+    try {
+      const updated = await apiRequest<User>("/users/me", {
+        method: "PATCH",
+        body: JSON.stringify({ plan }),
+      });
+      setUser(updated);
+      pushToast("План успешно изменён", "success");
+    } catch (err) {
+      pushToast(err instanceof ApiError ? err.message : "Не удалось изменить план", "error");
     }
   }
 
@@ -418,7 +434,8 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               {activeTab === "services" && (
                 <div className="space-y-6">
                   <h3 className="text-lg font-medium text-white mb-4">Подключенные сервисы</h3>
-                  <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-6">
+                    {/* GitHub */}
                     <div className="flex flex-col gap-2">
                       <label className="text-sm font-medium text-white">GitHub Personal Access Token</label>
                       <p className="text-xs text-text-secondary">
@@ -430,37 +447,54 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                         onChange={(e) => setGithubToken(e.target.value)}
                         placeholder="ghp_xxxxxxxxxxxx"
                       />
+                      {isGithubConnected && (
+                        <div className="flex items-center gap-2 text-sm text-green-400 mt-1">
+                          <div className="h-2 w-2 rounded-full bg-green-500" />
+                          GitHub подключен
+                        </div>
+                      )}
+                      <Button onClick={handleSaveGithub} loading={savingGithub} className="self-start mt-2">
+                        Сохранить GitHub
+                      </Button>
                     </div>
-                    {isGithubConnected && (
-                      <div className="flex items-center gap-2 text-sm text-green-400">
-                        <div className="h-2 w-2 rounded-full bg-green-500" />
-                        GitHub подключен
-                      </div>
-                    )}
-                    <Button onClick={handleSaveGithub} loading={savingGithub} className="self-start">
-                      Сохранить
-                    </Button>
                   </div>
                 </div>
               )}
 
               {activeTab === "usage" && (
                 <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-white mb-4">Использование и Лимиты</h3>
+                  <h3 className="text-lg font-medium text-white mb-4">Подписка и Лимиты</h3>
+                  <div className="flex flex-col gap-4 mb-6">
+                    <p className="text-sm text-text-secondary">Ваш текущий тарифный план: 
+                      <span className="font-semibold text-white ml-2">
+                        {user?.plan === "premium" ? "Премиум" : user?.plan === "paid" ? "Платный" : "Бесплатный"}
+                      </span>
+                    </p>
+                    {user?.plan === "free" && (
+                      <p className="text-xs text-text-secondary">
+                        У вас доступно 10 запросов в день. Для изменения подписки обратитесь к администратору.
+                      </p>
+                    )}
+                  </div>
                   <div className="rounded-xl border border-border bg-[#262626] p-6">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-white">Использовано: {user?.tokens_used?.toLocaleString("ru-RU") || 0}</span>
-                      <span className="text-sm font-medium text-text-secondary">1 000 000 лимит</span>
+                      <span className="text-sm font-medium text-white">
+                        Использовано токенов: {user?.tokens_used?.toLocaleString("ru-RU") || 0}
+                      </span>
+                      <span className="text-sm font-medium text-text-secondary">
+                        {user?.plan === "free" ? "Безлимит токенов (но 10 запросов/день)" : 
+                         user?.plan === "paid" ? "100 000 лимит" : 
+                         user?.plan === "premium" ? "200 000 лимит" : "1 000 000 лимит"}
+                      </span>
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-black/50">
-                      <div 
-                        className="h-full rounded-full bg-white transition-all duration-500" 
-                        style={{ width: `${Math.min(100, Math.round(((user?.tokens_used || 0) / 1000000) * 100))}%` }} 
-                      />
-                    </div>
-                    <p className="mt-4 text-xs text-text-secondary">
-                      У вас доступно 1 000 000 токенов каждый месяц. При достижении лимита доступ может быть ограничен.
-                    </p>
+                    {user?.plan !== "free" && (
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-black/50">
+                        <div 
+                          className="h-full rounded-full bg-white transition-all duration-500" 
+                          style={{ width: `${Math.min(100, Math.round(((user?.tokens_used || 0) / (user?.plan === "premium" ? 200000 : 100000)) * 100))}%` }} 
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

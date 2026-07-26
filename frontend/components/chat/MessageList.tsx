@@ -23,7 +23,7 @@ export function MessageList({ messages, userName, onEdit, onDelete, onRegenerate
   const lastAssistantId = [...messages].reverse().find((m) => m.role === "assistant")?.id;
 
   return (
-    <div className={cn("mx-auto w-full max-w-3xl flex-1", compactMode ? "py-2" : "py-4")}>
+    <div className={cn("mx-auto w-full max-w-3xl flex-1", compactMode ? "py-2" : "py-3 sm:py-4")}>
       {messages.map((message) => (
         <ChatMessage
           key={message.id}

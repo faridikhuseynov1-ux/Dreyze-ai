@@ -3,36 +3,36 @@
 @import "katex/dist/katex.min.css";
 
 :root {
-  --color-bg: #ffffff;
-  --color-card: #f9f9f9;
-  --color-card-hover: #ececec;
-  --color-border: #e5e5e5;
-  --color-text: #0d0d0d;
-  --color-text-secondary: #666666;
-  --color-accent: #000000;
-  --color-user-bubble: #f4f4f4;
+  --color-bg: #f7f8fb;
+  --color-card: #ffffff;
+  --color-card-hover: #eef2f7;
+  --color-border: #dfe5ee;
+  --color-text: #101828;
+  --color-text-secondary: #667085;
+  --color-accent: #2563eb;
+  --color-user-bubble: #e8f0ff;
 }
 
 html.dark, :root[data-theme="dark"] {
-  --color-bg: #000000;
-  --color-card: #000000;
-  --color-card-hover: #1a1a1a;
-  --color-border: #333333;
-  --color-text: #ffffff;
-  --color-text-secondary: #a3a3a3;
-  --color-accent: #ffffff;
-  --color-user-bubble: #1a1a1a;
+  --color-bg: #080b12;
+  --color-card: #101622;
+  --color-card-hover: #1b2433;
+  --color-border: #253044;
+  --color-text: #f8fafc;
+  --color-text-secondary: #9aa6b8;
+  --color-accent: #7c9cff;
+  --color-user-bubble: #1f2a3d;
 }
 
 html.light, :root[data-theme="light"] {
-  --color-bg: #ffffff;
-  --color-card: #f9f9f9;
-  --color-card-hover: #ececec;
-  --color-border: #e5e5e5;
-  --color-text: #000000;
-  --color-text-secondary: #666666;
-  --color-accent: #000000;
-  --color-user-bubble: #f4f4f4;
+  --color-bg: #f7f8fb;
+  --color-card: #ffffff;
+  --color-card-hover: #eef2f7;
+  --color-border: #dfe5ee;
+  --color-text: #101828;
+  --color-text-secondary: #667085;
+  --color-accent: #2563eb;
+  --color-user-bubble: #e8f0ff;
 }
 
 @theme inline {
@@ -53,6 +53,25 @@ body {
   color: var(--color-text);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--color-accent) 18%, transparent), transparent 34rem),
+    linear-gradient(180deg, color-mix(in srgb, var(--color-card) 28%, var(--color-bg)), var(--color-bg) 18rem);
+}
+
+button,
+a,
+input,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  touch-action: manipulation;
 }
 
 * {
@@ -127,12 +146,16 @@ body {
   padding: 1em;
   overflow-x: auto;
   margin: 0 0 0.75em 0;
+  max-width: 100%;
 }
 
 .prose-chat table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 0.75em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
 }
 
 .prose-chat th,
@@ -200,4 +223,3 @@ body {
 .prose-chat.prose-compact td {
   padding: 0.3em 0.5em;
 }
-

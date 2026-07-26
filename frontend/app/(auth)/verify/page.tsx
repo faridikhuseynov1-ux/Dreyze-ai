@@ -16,6 +16,7 @@ function VerifyForm() {
 
   const setAccessToken = useAuthStore((s) => s.setAccessToken);
   const setUser = useAuthStore((s) => s.setUser);
+  const setHydrated = useAuthStore((s) => s.setHydrated);
   const pushToast = useToastStore((s) => s.push);
 
   const [code, setCode] = useState("");
@@ -36,6 +37,7 @@ function VerifyForm() {
       setAccessToken(access_token);
       const user = await apiRequest<User>("/users/me");
       setUser(user);
+      setHydrated(true);
       pushToast("Аккаунт создан!", "success");
       router.replace("/chat");
     } catch (err) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, File as FileIcon, Paperclip, Square, X } from "lucide-react";
+import { ArrowUp, File as FileIcon, Paperclip, Square, X, Headphones } from "lucide-react";
 import { useRef, useState } from "react";
 import { apiRequest, ApiError } from "@/lib/api";
 import { useToastStore } from "@/lib/store";
@@ -11,9 +11,10 @@ interface ChatInputProps {
   isStreaming: boolean;
   onStop: () => void;
   disabledMessage?: string;
+  onVoiceModeToggle?: () => void;
 }
 
-export function ChatInput({ onSend, isStreaming, onStop, disabledMessage }: ChatInputProps) {
+export function ChatInput({ onSend, isStreaming, onStop, disabledMessage, onVoiceModeToggle }: ChatInputProps) {
   const [text, setText] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -58,13 +59,13 @@ export function ChatInput({ onSend, isStreaming, onStop, disabledMessage }: Chat
   }
 
   return (
-    <div className="bg-bg px-4 pb-4 pt-2">
+    <div className="bg-bg/92 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl sm:px-4 sm:pb-4">
       {disabledMessage ? (
         <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-2 rounded-3xl border border-red-500/50 bg-red-500/10 p-4 text-center">
           <p className="text-sm text-red-200 font-medium">{disabledMessage}</p>
         </div>
       ) : (
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 rounded-3xl border border-border bg-card p-3 shadow-sm focus-within:shadow-md transition-shadow">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 rounded-[1.6rem] border border-border bg-card/96 p-2 shadow-lg shadow-black/5 transition-shadow focus-within:border-accent/60 focus-within:shadow-xl sm:p-3">
           {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 px-1">
             {attachments.map((a) => (
@@ -84,7 +85,7 @@ export function ChatInput({ onSend, isStreaming, onStop, disabledMessage }: Chat
           </div>
         )}
 
-        <div className="flex items-end gap-2">
+        <div className="flex items-end gap-1.5 sm:gap-2">
           <input
             ref={fileInputRef}
             type="file"
@@ -108,7 +109,7 @@ export function ChatInput({ onSend, isStreaming, onStop, disabledMessage }: Chat
             onKeyDown={handleKeyDown}
             placeholder="Напишите сообщение..."
             rows={1}
-            className="max-h-48 min-h-[2.5rem] flex-1 resize-none bg-transparent py-2 text-sm text-text placeholder:text-text-secondary outline-none"
+            className="max-h-40 min-h-[2.75rem] flex-1 resize-none bg-transparent py-2.5 text-base text-text outline-none placeholder:text-text-secondary sm:max-h-48 sm:min-h-[2.5rem] sm:py-2 sm:text-sm"
             onInput={(e) => {
               const el = e.currentTarget;
               el.style.height = "auto";
@@ -116,10 +117,20 @@ export function ChatInput({ onSend, isStreaming, onStop, disabledMessage }: Chat
             }}
           />
 
+          {onVoiceModeToggle && !text.trim() && attachments.length === 0 && !isStreaming && (
+            <button
+              onClick={onVoiceModeToggle}
+              className="mb-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-card-hover hover:text-text sm:h-9 sm:w-9"
+              title="Голосовой режим"
+            >
+              <Headphones className="h-5 w-5" />
+            </button>
+          )}
+
           {isStreaming ? (
             <button
               onClick={onStop}
-              className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-black transition-colors hover:bg-white/90"
+              className="mb-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-text text-bg transition-colors hover:opacity-90 sm:h-9 sm:w-9"
               title="Остановить генерацию"
             >
               <Square className="h-4 w-4 fill-current" />
@@ -128,7 +139,7 @@ export function ChatInput({ onSend, isStreaming, onStop, disabledMessage }: Chat
             <button
               onClick={handleSubmit}
               disabled={uploading || (!text.trim() && attachments.length === 0)}
-              className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-black transition-colors hover:bg-white/90 disabled:opacity-40"
+              className="mb-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-text text-bg transition-colors hover:opacity-90 disabled:opacity-40 sm:h-9 sm:w-9"
               title="Отправить"
             >
               <ArrowUp className="h-4 w-4" />

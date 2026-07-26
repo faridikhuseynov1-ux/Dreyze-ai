@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, Zap, PictureInPicture2 } from "lucide-react";
+import { Menu, PictureInPicture2 } from "lucide-react";
 import { ModelSelector } from "@/components/chat/ModelSelector";
 import { ModeSelector } from "@/components/chat/ModeSelector";
 import { useAuthStore, useUIStore } from "@/lib/store";
@@ -16,8 +16,10 @@ export function TopBar({ tokenCount }: TopBarProps = {}) {
   const user = useAuthStore((s) => s.user);
 
   const tokensUsed = user?.tokens_used || 0;
-  const tokenLimit = 1000000;
-  const usagePercent = Math.min(100, Math.round((tokensUsed / tokenLimit) * 100));
+  const plan = user?.plan || "free";
+  const tokenLimit = plan === "infinite" ? Infinity : plan === "premium" ? 200000 : plan === "paid" ? 100000 : 1000000;
+  const usagePercent = tokenLimit === Infinity ? 0 : Math.min(100, Math.round((tokensUsed / tokenLimit) * 100));
+  const visibleTokenCount = tokenCount ? `${tokenCount >= 1000 ? Math.floor(tokenCount / 1000) + "K" : tokenCount} в чате` : null;
 
   const openPip = async () => {
     if (!("documentPictureInPicture" in window)) {
@@ -61,44 +63,45 @@ export function TopBar({ tokenCount }: TopBarProps = {}) {
   };
 
   return (
-    <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+    <div className="flex flex-wrap items-center gap-2 border-b border-border bg-bg/82 px-2 py-2 backdrop-blur-xl sm:px-4 sm:py-3">
       <button
         onClick={() => setSidebarOpen(true)}
         className="rounded-xl p-2 text-text-secondary hover:bg-card hover:text-text md:hidden"
       >
         <Menu className="h-5 w-5" />
       </button>
-      <div className="flex flex-1 items-center gap-2">
+      <div className="flex flex-1 flex-wrap items-center gap-1 sm:gap-2">
         <button
           onClick={openPip}
-          className="rounded-xl p-2 text-text-secondary hover:bg-card hover:text-text transition-colors"
+          className="hidden shrink-0 rounded-xl p-2 text-text-secondary transition-colors hover:bg-card hover:text-text sm:inline-flex"
           title="Режим поверх окон (PIP)"
         >
           <PictureInPicture2 className="h-5 w-5" />
         </button>
-        <div className="shrink-0">
+        <div className="min-w-0 shrink-0">
           <ModelSelector />
         </div>
-        <div className="shrink-0">
+        <div className="min-w-0 shrink-0">
           <ModeSelector />
         </div>
       </div>
       <div className="ml-auto flex items-center gap-2">
+        {visibleTokenCount && (
+          <span className="hidden rounded-full border border-border bg-card px-3 py-1 text-xs text-text-secondary lg:inline">
+            {visibleTokenCount}
+          </span>
+        )}
         <div 
-          className="hidden sm:flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs"
+          className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs sm:flex"
           title="Лимит токенов (месяц)"
         >
-          <span className="font-medium text-text-secondary">{tokensUsed >= 1000 ? Math.floor(tokensUsed / 1000) + 'K' : tokensUsed} / 1M</span>
+          <span className="font-medium text-text-secondary">
+            {tokensUsed >= 1000 ? Math.floor(tokensUsed / 1000) + 'K' : tokensUsed} / {plan === "infinite" ? "∞" : plan === "premium" ? "200K" : plan === "paid" ? "100K" : "1M"}
+          </span>
           <div className="h-1.5 w-16 overflow-hidden rounded-full bg-border">
             <div className="h-full rounded-full bg-text transition-all duration-500" style={{ width: `${usagePercent}%` }} />
           </div>
         </div>
-        {tokenCount !== undefined && (
-          <div className="flex items-center gap-1.5 rounded-full bg-card px-3 py-1 text-xs font-medium text-text-secondary border border-border">
-            <Zap className="h-3.5 w-3.5 text-accent" />
-            <span>{tokenCount.toLocaleString("ru-RU")} токенов</span>
-          </div>
-        )}
       </div>
     </div>
   );

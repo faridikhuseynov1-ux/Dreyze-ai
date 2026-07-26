@@ -1,4 +1,4 @@
-export type ModelId = "claude";
+export type ModelId = "claude" | "qwen" | "deepseek" | "glm" | "grok" | "gemini" | "gpt" | "kmc/kimi-for-coding";
 export type ModeId = "fast" | "smart" | "reasoning" | "research" | "vision" | "video";
 
 export interface User {
@@ -8,6 +8,7 @@ export interface User {
   avatar_url: string | null;
   created_at: string;
   tokens_used: number;
+  plan: string;
 }
 
 export interface ProfileStats {

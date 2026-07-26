@@ -10,6 +10,7 @@ import { PipWrapper } from "@/components/layout/PipWrapper";
 import { useChatSession } from "@/hooks/useChatSession";
 import { useAuthStore, usePendingMessageStore, useUIStore, usePreferencesStore } from "@/lib/store";
 import { VideoGenerator } from "@/components/chat/VideoGenerator";
+import { VoiceModeOverlay } from "@/components/chat/VoiceModeOverlay";
 import { estimateTokens } from "@/lib/utils";
 
 export default function ChatSessionPage() {
@@ -20,6 +21,7 @@ export default function ChatSessionPage() {
   const { messages, loading, isStreaming, isGenerating, sendMessage, regenerate, stop, editMessage, deleteMessage, pinMessage } =
     useChatSession(sessionId);
   const sentPendingRef = useRef(false);
+  const [isVoiceModeOpen, setIsVoiceModeOpen] = useState(false);
 
   useEffect(() => {
     sentPendingRef.current = false;
@@ -129,8 +131,17 @@ export default function ChatSessionPage() {
             <ChevronDown size={20} />
           </button>
         )}
-        <ChatInput onSend={sendMessage} isStreaming={isStreaming} onStop={stop} disabledMessage={disabledMessage} />
+        <ChatInput onSend={sendMessage} isStreaming={isStreaming} onStop={stop} disabledMessage={disabledMessage} onVoiceModeToggle={() => setIsVoiceModeOpen(true)} />
       </div>
+      {isVoiceModeOpen && (
+        <VoiceModeOverlay
+          onClose={() => setIsVoiceModeOpen(false)}
+          onSend={sendMessage}
+          isStreaming={isStreaming}
+          isGenerating={isGenerating}
+          lastMessage={messages[messages.length - 1]}
+        />
+      )}
     </div>
     </PipWrapper>
   );

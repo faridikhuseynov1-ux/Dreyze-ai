@@ -11,6 +11,8 @@ class UserOut(BaseModel):
     avatar_url: str | None
     created_at: datetime
     tokens_used: int = 0
+    plan: str = "free"
+    is_admin: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -24,6 +26,9 @@ class ProfileStats(BaseModel):
 class UpdateProfileRequest(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
     email: EmailStr | None = None
+
+class AdminPlanUpdateRequest(BaseModel):
+    plan: str
 
 
 class UpdatePasswordRequest(BaseModel):

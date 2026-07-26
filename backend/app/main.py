@@ -58,6 +58,8 @@ async def security_headers(request: Request, call_next):
 Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 # Uploads are no longer served publicly via StaticFiles
 
+from app.api.routes.tts import router as tts_router
+
 app.include_router(auth_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
@@ -65,6 +67,7 @@ app.include_router(folders_router, prefix="/api")
 app.include_router(memory_router, prefix="/api")
 app.include_router(uploads_router, prefix="/api")
 app.include_router(sandbox_router, prefix="/api")
+app.include_router(tts_router, prefix="/api")
 app.include_router(websocket_router)
 
 

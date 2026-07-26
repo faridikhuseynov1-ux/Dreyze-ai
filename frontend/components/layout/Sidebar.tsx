@@ -7,17 +7,14 @@ import {
   FolderPlus,
   Folder as FolderIcon,
   Keyboard,
-  LogOut,
   MessageSquare,
   Moon,
   MoreVertical,
   Pencil,
   Plus,
   Search,
-  Settings,
   Sun,
   Trash2,
-  User as UserIcon,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -38,7 +35,7 @@ import {
   useUIStore,
 } from "@/lib/store";
 import type { ChatSession, SearchResult } from "@/lib/types";
-import { cn, formatRelativeTime, initialsFromName } from "@/lib/utils";
+import { cn, formatRelativeTime } from "@/lib/utils";
 
 const FOLDER_COLORS = ["#3b82f6", "#22c55e", "#a855f7", "#f97316", "#ec4899", "#eab308"];
 
@@ -62,7 +59,6 @@ export function Sidebar() {
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
 
-  const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clear);
   const pushToast = useToastStore((s) => s.push);
   const compactMode = usePreferencesStore((s) => s.compactMode);
@@ -185,13 +181,15 @@ export function Sidebar() {
   }
 
   async function handleLogout() {
+    clearAuth();
+    setSidebarOpen(false);
+    router.replace("/login");
+
     try {
       await apiRequest("/auth/logout", { method: "POST" });
     } catch {
       /* ignore */
     }
-    clearAuth();
-    router.replace("/login");
   }
 
   // Render individual session item
@@ -203,9 +201,9 @@ export function Sidebar() {
           href={`/chat/${session.id}`}
           onClick={() => setSidebarOpen(false)}
           className={cn(
-            "flex items-center gap-2 rounded-xl transition-colors",
+            "flex min-h-10 items-center gap-2 rounded-xl transition-colors",
             compactMode ? "px-2.5 py-1 text-xs" : "px-3 py-2 text-sm",
-            active ? "bg-card-hover text-text" : "text-text-secondary hover:bg-card-hover hover:text-text"
+            active ? "bg-card-hover text-text shadow-sm" : "text-text-secondary hover:bg-card-hover hover:text-text"
           )}
         >
           <MessageSquare className={cn("shrink-0", compactMode ? "h-3.5 w-3.5" : "h-4 w-4")} />
@@ -226,7 +224,7 @@ export function Sidebar() {
             <span className="flex-1 truncate">{session.title}</span>
           )}
 
-          <span className="hidden shrink-0 items-center gap-1 group-hover:flex">
+          <span className="flex shrink-0 items-center gap-1 opacity-80 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
             <button
               onClick={(e) => {
                 e.preventDefault();
@@ -253,7 +251,7 @@ export function Sidebar() {
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           </span>
-          <span className="shrink-0 text-xs text-text-secondary group-hover:hidden">
+          <span className="hidden shrink-0 text-xs text-text-secondary sm:inline sm:group-hover:hidden">
             {formatRelativeTime(session.updated_at)}
           </span>
         </Link>
@@ -298,8 +296,8 @@ export function Sidebar() {
   };
 
   const content = (
-    <div className="flex h-full w-full flex-col backdrop-blur-3xl bg-card/60">
-      <div className="flex items-center justify-between px-4 pt-4">
+    <div className="flex h-full w-full flex-col bg-card/88 shadow-2xl shadow-black/10 backdrop-blur-3xl md:bg-card/72 md:shadow-none">
+      <div className="flex items-center justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))]">
         <div className="flex items-center gap-2">
           <Image src="/logo.png" alt="Dreyze AI" width={28} height={28} className="h-7 w-7 object-contain" />
           <span className="text-sm font-semibold tracking-tight">Dreyze AI</span>
@@ -329,10 +327,10 @@ export function Sidebar() {
       </div>
 
       <div className="p-4 space-y-2">
-        <button
-          onClick={handleNewChat}
-          className={cn(
-            "flex w-full items-center gap-2 rounded-xl bg-transparent font-medium text-text transition-colors hover:bg-card-hover",
+          <button
+            onClick={handleNewChat}
+            className={cn(
+            "flex w-full items-center gap-2 rounded-2xl bg-text font-medium text-bg shadow-sm transition-colors hover:opacity-90",
             compactMode ? "px-3 py-1.5 text-xs" : "px-3 py-2.5 text-sm"
           )}
         >
@@ -483,10 +481,11 @@ export function Sidebar() {
         )}
       </div>
 
-      <div className="border-t border-border p-3">
+      <div className="border-t border-border p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <UserDropdown 
           onOpenProfile={() => setIsProfileModalOpen(true)} 
           onOpenSettings={() => setIsSettingsModalOpen(true)} 
+          onLogout={handleLogout}
         />
       </div>
     </div>
@@ -494,7 +493,7 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="hidden h-full w-72 shrink-0 border-r border-border md:block">{content}</aside>
+      <aside className="hidden h-full w-72 shrink-0 border-r border-border md:block lg:w-80">{content}</aside>
 
       <AnimatePresence>
         {sidebarOpen && (
@@ -511,7 +510,7 @@ export function Sidebar() {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "tween", duration: 0.25, ease: "easeOut" }}
-              className="fixed inset-y-0 left-0 z-50 w-72 border-r border-border md:hidden"
+              className="fixed inset-y-0 left-0 z-50 w-[min(86vw,21rem)] border-r border-border md:hidden"
             >
               {content}
             </motion.aside>
