@@ -6,10 +6,16 @@ import { useState } from "react";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { apiRequest, ApiError } from "@/lib/api";
+import { apiRequest, ApiError, API_URL } from "@/lib/api";
+import { useAuthStore, useToastStore } from "@/lib/store";
+import type { User } from "@/lib/types";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const setAccessToken = useAuthStore((s) => s.setAccessToken);
+  const setUser = useAuthStore((s) => s.setUser);
+  const setHydrated = useAuthStore((s) => s.setHydrated);
+  const pushToast = useToastStore((s) => s.push);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -32,13 +38,19 @@ export default function RegisterPage() {
     }
 
     setLoading(true);
+    const normalizedEmail = email.trim().toLowerCase();
     try {
-      await apiRequest("/auth/register", {
+      const { access_token } = await apiRequest<{ access_token: string }>("/auth/register", {
         method: "POST",
         skipAuth: true,
-        body: JSON.stringify({ name, email, password, confirm_password: confirmPassword }),
+        body: JSON.stringify({ name: name.trim(), email: normalizedEmail, password, confirm_password: confirmPassword }),
       });
-      router.push(`/verify?email=${encodeURIComponent(email)}`);
+      setAccessToken(access_token);
+      const user = await apiRequest<User>("/users/me");
+      setUser(user);
+      setHydrated(true);
+      pushToast("Аккаунт создан", "success");
+      router.replace("/chat");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось создать аккаунт");
     } finally {
@@ -47,7 +59,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <AuthLayout title="Создать аккаунт" subtitle="Мы отправим код подтверждения на вашу почту">
+    <AuthLayout title="Создать аккаунт" subtitle="Email и пароль, без обязательной почтовой проверки">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input label="Имя" required value={name} onChange={(e) => setName(e.target.value)} />
         <Input
@@ -81,7 +93,7 @@ export default function RegisterPage() {
         </Button>
         
         <div className="mt-2 border-t border-border pt-4 flex flex-col gap-3">
-          <a href={`${process.env.NEXT_PUBLIC_API_URL}/auth/google/login`}>
+          <a href={`${API_URL}/auth/google/login`} className="block">
             <Button type="button" variant="secondary" className="w-full flex items-center justify-center gap-2">
               <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>

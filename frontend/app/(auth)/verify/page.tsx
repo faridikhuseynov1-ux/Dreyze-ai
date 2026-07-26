@@ -12,7 +12,7 @@ import type { User } from "@/lib/types";
 function VerifyForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get("email") || "";
+  const email = (searchParams.get("email") || "").trim().toLowerCase();
 
   const setAccessToken = useAuthStore((s) => s.setAccessToken);
   const setUser = useAuthStore((s) => s.setUser);
@@ -32,7 +32,7 @@ function VerifyForm() {
       const { access_token } = await apiRequest<{ access_token: string }>("/auth/verify", {
         method: "POST",
         skipAuth: true,
-        body: JSON.stringify({ email, code }),
+        body: JSON.stringify({ email, code: code.trim() }),
       });
       setAccessToken(access_token);
       const user = await apiRequest<User>("/users/me");

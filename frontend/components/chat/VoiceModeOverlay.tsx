@@ -164,7 +164,7 @@ export function VoiceModeOverlay({ onClose, onSend, isStreaming, isGenerating, l
       if (audioRef.current) {
         // Use streaming GET request for zero-delay playback
         const slicedText = cleanText.length > 1500 ? cleanText.slice(0, 1500) + "..." : cleanText;
-        const url = `/api/tts?text=${encodeURIComponent(slicedText)}&t=${Date.now()}`;
+        const url = `/api/tts?text=${encodeURIComponent(slicedText)}`;
         
         audioRef.current.src = url;
         audioRef.current.onended = () => {

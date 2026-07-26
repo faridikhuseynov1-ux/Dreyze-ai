@@ -2,9 +2,18 @@ import { API_URL, refreshAccessToken } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import type { Attachment, Message, ModeId, ModelId } from "@/lib/types";
 
-const WS_BASE =
-  process.env.NEXT_PUBLIC_WS_URL ||
-  API_URL.replace(/^http/, "ws").replace(/\/api$/, "");
+function resolveWsBase() {
+  const configured = process.env.NEXT_PUBLIC_WS_URL || API_URL.replace(/^http/, "ws");
+  const normalized = configured.replace(/\/$/, "");
+
+  if (normalized === "wss://dreyzfarid.online" || normalized === "ws://dreyzfarid.online") {
+    return `${normalized}/api`;
+  }
+
+  return normalized;
+}
+
+const WS_BASE = resolveWsBase();
 
 export type ServerEvent =
   | { type: "user_message"; message: Message }

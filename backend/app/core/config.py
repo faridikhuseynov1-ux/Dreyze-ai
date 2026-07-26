@@ -1,11 +1,14 @@
 import json
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(env_file=_ENV_FILE, env_file_encoding="utf-8", extra="ignore")
 
     # Database
     DATABASE_URL: str
@@ -23,6 +26,7 @@ class Settings(BaseSettings):
     # Email
     RESEND_API_KEY: str
     EMAIL_FROM: str
+    EMAIL_DELIVERY_REQUIRED: bool = False
 
     # AI
     OPENROUTER_API_KEY: str | None = None
@@ -30,6 +34,8 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY_FALLBACK_2: str | None = None
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
     AI_PROVIDERS: str = "[]"
+    ANYMODEL_API_KEY: str | None = None
+    ANYMODEL_BASE_URL: str = "https://anymodel.org/v1"
 
     # Uploads
     UPLOAD_DIR: str = "./uploads"

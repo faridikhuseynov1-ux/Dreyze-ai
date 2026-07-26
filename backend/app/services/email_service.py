@@ -1,14 +1,28 @@
 import asyncio
+import logging
 
 import resend
 
 from app.core.config import settings
 
-resend.api_key = settings.RESEND_API_KEY
-
 LOGO_URL = f"{settings.FRONTEND_URL}/logo-black-bg.png"
 
 _FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+logger = logging.getLogger(__name__)
+
+
+def _send_email(payload: dict) -> None:
+    if not settings.RESEND_API_KEY or not settings.EMAIL_FROM:
+        raise RuntimeError("Email service is not configured")
+    resend.api_key = settings.RESEND_API_KEY
+    result = resend.Emails.send(payload)
+    headers = result.get("http_headers", {}) if isinstance(result, dict) else {}
+    logger.info(
+        "Email accepted by Resend id=%s daily_quota=%s monthly_quota=%s",
+        result.get("id") if isinstance(result, dict) else None,
+        headers.get("x-resend-daily-quota"),
+        headers.get("x-resend-monthly-quota"),
+    )
 
 
 def _base_email(preheader: str, title: str, body_html: str) -> str:
@@ -111,11 +125,12 @@ async def send_verification_code(email: str, code: str, name: str) -> None:
       </table>
     """
     await asyncio.to_thread(
-        resend.Emails.send,
+        _send_email,
         {
             "from": settings.EMAIL_FROM,
             "to": [email],
             "subject": f"Ваш код подтверждения: {code}",
+            "text": f"Ваш код подтверждения Dreyze AI: {code}. Код действителен 10 минут.",
             "html": _base_email(
                 f"Ваш код подтверждения: {code}",
                 "Подтверждение регистрации",
@@ -162,11 +177,15 @@ async def send_password_reset(email: str, reset_url: str) -> None:
       </table>
     """
     await asyncio.to_thread(
-        resend.Emails.send,
+        _send_email,
         {
             "from": settings.EMAIL_FROM,
             "to": [email],
             "subject": "Сброс пароля",
+            "text": (
+                "Мы получили запрос на сброс пароля Dreyze AI.\n"
+                f"Ссылка действительна 1 час и работает один раз:\n{reset_url}"
+            ),
             "html": _base_email(
                 "Мы получили запрос на сброс пароля для вашего аккаунта",
                 "Восстановление пароля",
@@ -194,11 +213,12 @@ async def send_welcome_email(email: str, name: str) -> None:
       </table>
     """
     await asyncio.to_thread(
-        resend.Emails.send,
+        _send_email,
         {
             "from": settings.EMAIL_FROM,
             "to": [email],
             "subject": "Добро пожаловать в Dreyze AI",
+            "text": f"Добро пожаловать в Dreyze AI, {name}! Ваш аккаунт успешно создан.",
             "html": _base_email(
                 "Ваш аккаунт успешно создан",
                 "Успешная регистрация",

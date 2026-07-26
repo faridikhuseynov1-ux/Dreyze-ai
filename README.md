@@ -92,14 +92,14 @@ npm run dev
 
 ```
 NEXT_PUBLIC_API_URL=https://dreyzfarid.online/api
-NEXT_PUBLIC_WS_URL=wss://dreyzfarid.online
+NEXT_PUBLIC_WS_URL=wss://dreyzfarid.online/api
 ```
 
 Для продакшена на `dreyzfarid.online` укажите реальные адреса backend, например:
 
 ```
 NEXT_PUBLIC_API_URL=https://dreyzfarid.online/api
-NEXT_PUBLIC_WS_URL=wss://dreyzfarid.online
+NEXT_PUBLIC_WS_URL=wss://dreyzfarid.online/api
 ```
 
 и в `backend/.env`:

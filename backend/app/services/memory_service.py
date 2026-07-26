@@ -69,8 +69,9 @@ async def extract_memories(user_message: str, assistant_message: str) -> list[di
         providers = json.loads(settings.AI_PROVIDERS)
         if not providers: return []
         api_url = providers[0].get("url", "https://api.vibecode-claude.online/v1")
-        if not api_url.endswith("/v1") and not api_url.endswith("/chat/completions"):
-            api_url = api_url.rstrip("/") + "/v1"
+        api_url = api_url.strip().rstrip("/")
+        if not api_url.endswith("/chat/completions"):
+            api_url = f"{api_url}/chat/completions" if api_url.endswith("/v1") else f"{api_url}/v1/chat/completions"
         api_key = providers[0].get("key")
     except Exception:
         return []
@@ -81,7 +82,7 @@ async def extract_memories(user_message: str, assistant_message: str) -> list[di
     }
 
     payload = {
-        "model": "sonnet 4.5",
+        "model": EXTRACTION_MODEL,
         "messages": [
             {"role": "system", "content": prompt},
             {"role": "user", "content": f"Пользователь: {user_message}\nАссистент: {assistant_message}"},
@@ -91,7 +92,7 @@ async def extract_memories(user_message: str, assistant_message: str) -> list[di
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(f"{api_url}/chat/completions", json=payload, headers=headers)
+            resp = await client.post(api_url, json=payload, headers=headers)
             if resp.status_code == 200:
                 data = resp.json()
                 text = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()

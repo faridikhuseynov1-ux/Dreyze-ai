@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { apiRequest, ApiError } from "@/lib/api";
+import { apiRequest, ApiError, API_URL } from "@/lib/api";
 import { useAuthStore, useToastStore } from "@/lib/store";
 import type { User } from "@/lib/types";
 
@@ -15,6 +15,8 @@ export default function LoginPage() {
   const setAccessToken = useAuthStore((s) => s.setAccessToken);
   const setUser = useAuthStore((s) => s.setUser);
   const setHydrated = useAuthStore((s) => s.setHydrated);
+  const hydrated = useAuthStore((s) => s.hydrated);
+  const user = useAuthStore((s) => s.user);
   const pushToast = useToastStore((s) => s.push);
 
   const [email, setEmail] = useState("");
@@ -22,15 +24,22 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (hydrated && user) {
+      router.replace("/chat");
+    }
+  }, [hydrated, user, router]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
+    const normalizedEmail = email.trim().toLowerCase();
     try {
       const { access_token } = await apiRequest<{ access_token: string }>("/auth/login", {
         method: "POST",
         skipAuth: true,
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: normalizedEmail, password }),
       });
       setAccessToken(access_token);
       const user = await apiRequest<User>("/users/me");
@@ -77,7 +86,7 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-2 border-t border-border pt-4 flex flex-col gap-3">
-          <a href={`${process.env.NEXT_PUBLIC_API_URL}/auth/google/login`}>
+          <a href={`${API_URL}/auth/google/login`} className="block">
             <Button type="button" variant="secondary" className="w-full flex items-center justify-center gap-2">
               <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>

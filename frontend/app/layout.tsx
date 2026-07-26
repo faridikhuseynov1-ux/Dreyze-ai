@@ -1,13 +1,7 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { ToastContainer } from "@/components/ui/ToastContainer";
 import "./globals.css";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin", "cyrillic"],
-});
 
 export const metadata: Metadata = {
   title: {
@@ -66,7 +60,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.variable} antialiased bg-bg text-text`}>
+      <body className="antialiased bg-bg text-text">
         <AuthProvider>
           {children}
           <ToastContainer />

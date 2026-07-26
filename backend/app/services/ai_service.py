@@ -13,10 +13,10 @@ Mode = Literal["fast", "smart", "reasoning", "research", "vision"]
 # Model families are resolved to concrete OpenRouter ids per selected mode.
 MODEL_CATALOG: dict[str, dict[str, str]] = {
     "claude": {
-        "default": "cc/claude-opus-4-6",
-        "fast": "cc/claude-sonnet-4-6",
-        "reasoning": "cc/claude-sonnet-4-6",
-        "vision": "cc/claude-opus-4-6",
+        "default": "ag/claude-sonnet-4-6",
+        "fast": "ag/claude-sonnet-4-6",
+        "reasoning": "ag/claude-sonnet-4-6",
+        "vision": "ag/claude-sonnet-4-6",
     },
     "qwen": {
         "default": "am/qwen3.6-35b-a3b",
@@ -38,21 +38,21 @@ MODEL_CATALOG: dict[str, dict[str, str]] = {
     },
     "grok": {
         "default": "xai/grok-4",
-        "fast": "xai/grok-4",
-        "reasoning": "xai/grok-4",
+        "fast": "xai/grok-code-fast-1",
+        "reasoning": "xai/grok-4-fast-reasoning",
         "vision": "xai/grok-4",
     },
     "gemini": {
-        "default": "gc/gemini-2.5-pro",
-        "fast": "gc/gemini-2.5-pro",
+        "default": "gc/gemini-2.5-flash",
+        "fast": "gc/gemini-2.5-flash-lite",
         "reasoning": "gc/gemini-2.5-pro",
         "vision": "gc/gemini-2.5-pro",
     },
     "gpt": {
-        "default": "cx/gpt-5.2-pro-2025-12-11",
-        "fast": "cx/gpt-5.2-pro-2025-12-11",
-        "reasoning": "cx/gpt-5.2-pro-2025-12-11",
-        "vision": "cx/gpt-5.2-pro-2025-12-11",
+        "default": "cx/gpt-5.6-sol",
+        "fast": "cx/gpt-5.4-mini",
+        "reasoning": "cx/gpt-5.6-sol",
+        "vision": "cx/gpt-5.6-sol",
     },
     "kmc/kimi-for-coding": {
         "default": "kmc/kimi-for-coding",
@@ -62,7 +62,26 @@ MODEL_CATALOG: dict[str, dict[str, str]] = {
     }
 }
 
+MODEL_FALLBACKS: dict[str, list[str]] = {
+    "claude": ["cc/claude-sonnet-5", "cc/claude-opus-5", "cc/claude-haiku-4-5-20251001"],
+    "qwen": ["am/qwen3.6-35b-a3b"],
+    "deepseek": ["am/deepseek-v4-flash", "am/deepseek-v4-pro"],
+    "glm": ["glm/glm-5.2", "glm/glm-5.1", "glm/glm-4.6v"],
+    "grok": ["xai/grok-4", "xai/grok-4-fast-reasoning", "xai/grok-3"],
+    "gemini": ["gc/gemini-2.5-flash", "gc/gemini-2.5-flash-lite", "gc/gemini-2.5-pro"],
+    "gpt": ["cx/gpt-5.4-mini", "cx/gpt-5.5", "cx/gpt-5.6-sol"],
+    "kmc/kimi-for-coding": ["kmc/kimi-for-coding", "cx/gpt-5.4-mini"],
+    "llama": ["ag/gpt-oss-120b-medium", "cx/gpt-5.4-mini"],
+}
+
 REASONING_MODES = {"reasoning"}
+READABLE_DOCUMENT_TYPES = {
+    "application/json",
+    "text/csv",
+    "text/markdown",
+    "text/plain",
+}
+MAX_DOCUMENT_CHARS = 12000
 
 
 def resolve_model(model: str, mode: Mode, has_images: bool) -> tuple[str, bool, bool]:
@@ -99,9 +118,44 @@ def _image_to_url(relative_or_absolute_url: str, content_type: str) -> str:
     return f"data:{content_type};base64,{encoded}"
 
 
+def _upload_path(relative_or_absolute_url: str) -> Path | None:
+    if relative_or_absolute_url.startswith("http://") or relative_or_absolute_url.startswith("https://"):
+        return None
+    relative_path = relative_or_absolute_url.removeprefix("/uploads/")
+    file_path = Path(settings.UPLOAD_DIR) / relative_path
+    if not file_path.is_file():
+        return None
+    return file_path
+
+
+def _read_document_text(attachment: dict) -> str:
+    content_type = attachment.get("content_type", "")
+    name = attachment.get("name", "document")
+    if content_type not in READABLE_DOCUMENT_TYPES:
+        return f"[Файл {name}: тип {content_type or 'unknown'} загружен, но текст из него пока не извлекается.]"
+
+    file_path = _upload_path(attachment.get("url", ""))
+    if file_path is None:
+        return f"[Файл {name}: не удалось найти локальный файл для чтения.]"
+
+    raw = file_path.read_bytes()
+    text = raw.decode("utf-8", errors="replace").strip()
+    if not text:
+        return f"[Файл {name}: файл пустой.]"
+    if len(text) > MAX_DOCUMENT_CHARS:
+        text = f"{text[:MAX_DOCUMENT_CHARS]}\n\n[Файл обрезан до {MAX_DOCUMENT_CHARS} символов.]"
+    return f"[Файл {name}]\n{text}"
+
+
 def build_user_content(text: str, attachments: list[dict]) -> str | list[dict]:
-    """Builds an OpenAI-compatible content payload, inlining images as data URIs."""
+    """Builds an OpenAI-compatible content payload, inlining images and readable documents."""
     images = [a for a in attachments if a.get("kind") == "image"]
+    documents = [a for a in attachments if a.get("kind") == "document"]
+    document_text = "\n\n".join(_read_document_text(document) for document in documents)
+
+    if document_text:
+        text = f"{text}\n\n[Содержимое прикрепленных файлов]\n{document_text}".strip()
+
     if not images:
         return text
 
@@ -112,8 +166,19 @@ def build_user_content(text: str, attachments: list[dict]) -> str | list[dict]:
     return parts
 
 
+def _normalize_chat_completions_url(api_url: str) -> str:
+    api_url = api_url.strip().rstrip("/")
+    if api_url.endswith("/chat/completions"):
+        return api_url
+    if api_url.endswith("/v1"):
+        return f"{api_url}/chat/completions"
+    return f"{api_url}/v1/chat/completions"
+
+
 def _provider_candidates() -> list[dict[str, str]]:
     providers = list(settings.ai_providers_list)
+    if settings.ANYMODEL_API_KEY:
+        providers.append({"url": settings.ANYMODEL_BASE_URL, "key": settings.ANYMODEL_API_KEY})
     for key in [
         settings.OPENROUTER_API_KEY,
         settings.OPENROUTER_API_KEY_FALLBACK_1,
@@ -129,13 +194,24 @@ def _provider_candidates() -> list[dict[str, str]]:
         api_key = provider.get("key", "").strip()
         if not api_key:
             continue
-        if not api_url.endswith("/v1") and not api_url.endswith("/chat/completions"):
-            api_url = api_url.rstrip("/") + "/v1"
+        chat_url = _normalize_chat_completions_url(api_url)
         identity = (api_url, api_key[-12:])
         if identity in seen:
             continue
         seen.add(identity)
-        unique.append({"url": api_url, "key": api_key})
+        unique.append({"url": chat_url, "key": api_key})
+    return unique
+
+
+def _model_candidates(model: str, mode: Mode, has_images: bool) -> list[str]:
+    model_id, _, use_web_search = resolve_model(model, mode, has_images)
+    candidates = [model_id, *MODEL_FALLBACKS.get(model, []), *MODEL_FALLBACKS["gpt"]]
+
+    unique: list[str] = []
+    for candidate in candidates:
+        if not candidate or candidate in unique:
+            continue
+        unique.append(f"{candidate}:online" if use_web_search and not candidate.endswith(":online") else candidate)
     return unique
 
 
@@ -146,12 +222,9 @@ async def stream_completion(
     has_images: bool,
 ) -> AsyncGenerator[str, None]:
     """Streams assistant text chunks from OpenRouter as they arrive."""
-    model_id, use_reasoning, use_web_search = resolve_model(model, mode, has_images)
-    if use_web_search:
-        model_id = f"{model_id}:online"
+    _, use_reasoning, _ = resolve_model(model, mode, has_images)
 
     payload: dict = {
-        "model": model_id,
         "messages": messages,
         "stream": True,
         "temperature": 0.4 if mode == "fast" else 0.7,
@@ -171,45 +244,44 @@ async def stream_completion(
 
     last_error = None
     has_yielded = False
-    for provider in providers:
-        api_url = provider["url"]
-        api_key = provider.get("key")
-        headers["Authorization"] = f"Bearer {api_key}"
-        try:
-            timeout = httpx.Timeout(connect=10, read=90, write=20, pool=10)
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                async with client.stream(
-                    "POST", f"{api_url}/chat/completions", json=payload, headers=headers
-                ) as response:
-                    if response.status_code != 200:
-                        error_body = await response.aread()
-                        last_error = f"Error {response.status_code} from {api_url}: {error_body.decode(errors='ignore')}"
-                        if response.status_code in (429, 401, 403, 402, 529, 500, 502, 503, 504):
-                            continue # Try next provider
-                        else:
-                            raise RuntimeError(last_error)
-        
-                    async for line in response.aiter_lines():
-                        if not line or not line.startswith("data: "):
+    for model_id in _model_candidates(model, mode, has_images):
+        payload["model"] = model_id
+        for provider in providers:
+            chat_url = provider["url"]
+            api_key = provider.get("key")
+            headers["Authorization"] = f"Bearer {api_key}"
+            try:
+                timeout = httpx.Timeout(connect=10, read=90, write=20, pool=10)
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    async with client.stream(
+                        "POST", chat_url, json=payload, headers=headers
+                    ) as response:
+                        if response.status_code != 200:
+                            error_body = await response.aread()
+                            last_error = f"Error {response.status_code} from {chat_url} model {model_id}: {error_body.decode(errors='ignore')}"
                             continue
-                        data = line.removeprefix("data: ").strip()
-                        if data == "[DONE]":
-                            break
-                        try:
-                            chunk = json.loads(data)
-                        except json.JSONDecodeError:
-                            continue
-                        delta = chunk.get("choices", [{}])[0].get("delta", {})
-                        content = delta.get("content")
-                        if content:
-                            has_yielded = True
-                            yield content
-                    return # Exit the function after a successful stream
-        except Exception as e:
-            if has_yielded:
-                raise RuntimeError(f"Поток прерван (ошибка провайдера: {e})")
-            last_error = str(e)
-            continue
+
+                        async for line in response.aiter_lines():
+                            if not line or not line.startswith("data: "):
+                                continue
+                            data = line.removeprefix("data: ").strip()
+                            if data == "[DONE]":
+                                break
+                            try:
+                                chunk = json.loads(data)
+                            except json.JSONDecodeError:
+                                continue
+                            delta = chunk.get("choices", [{}])[0].get("delta", {})
+                            content = delta.get("content")
+                            if content:
+                                has_yielded = True
+                                yield content
+                        return
+            except Exception as e:
+                if has_yielded:
+                    raise RuntimeError(f"Поток прерван (ошибка провайдера: {e})")
+                last_error = str(e)
+                continue
             
     if last_error:
         raise RuntimeError("AI временно не ответил. Попробуйте еще раз или выберите другую модель.")

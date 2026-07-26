@@ -12,17 +12,21 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [message, setMessage] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
     setError("");
     setLoading(true);
     try {
-      await apiRequest("/auth/forgot-password", {
+      const response = await apiRequest<{ message: string }>("/auth/forgot-password", {
         method: "POST",
         skipAuth: true,
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: normalizedEmail }),
       });
+      setEmail(normalizedEmail);
+      setMessage(response.message);
       setSent(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Что-то пошло не так");
@@ -32,8 +36,17 @@ export default function ForgotPasswordPage() {
   }
 
   if (sent) {
+    const resetUrl = message.startsWith("Ссылка для сброса пароля: ")
+      ? message.replace("Ссылка для сброса пароля: ", "")
+      : "";
+
     return (
-      <AuthLayout title="Проверьте почту" subtitle={`Если аккаунт с ${email} существует, мы отправили ссылку для сброса пароля`}>
+      <AuthLayout title={resetUrl ? "Ссылка готова" : "Проверьте почту"} subtitle={resetUrl ? "Почта сейчас недоступна, поэтому ссылка показана здесь" : `Если аккаунт с ${email} существует, мы отправили ссылку для сброса пароля`}>
+        {resetUrl && (
+          <Link href={resetUrl.replace(/^https?:\/\/[^/]+/, "")}>
+            <Button className="mb-3 w-full">Сбросить пароль</Button>
+          </Link>
+        )}
         <Link href="/login">
           <Button variant="secondary" className="w-full">
             Вернуться ко входу

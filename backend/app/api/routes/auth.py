@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -34,9 +35,10 @@ from app.schemas.auth import (
     TokenResponse,
     VerifyCodeRequest,
 )
-from app.services.email_service import send_password_reset, send_verification_code
+from app.services.email_service import send_password_reset, send_verification_code, send_welcome_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 CODE_TTL_MINUTES = 10
 RESET_TTL_HOURS = 1
@@ -74,25 +76,55 @@ def _verify_csrf(request: Request) -> None:
     cookie_token = request.cookies.get(CSRF_COOKIE)
     header_token = request.headers.get("X-CSRF-Token")
     if not cookie_token or not header_token or cookie_token != header_token:
-        print(f"CSRF FAIL: cookie={cookie_token}, header={header_token}"); raise HTTPException(status.HTTP_403_FORBIDDEN, "CSRF token missing or invalid")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "CSRF token missing or invalid")
 
 
-@router.post("/register", response_model=RegisterResponse)
+@router.post("/register", response_model=TokenResponse)
 @limiter.limit("5/minute")
-async def register(request: Request, payload: RegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register(request: Request, response: Response, payload: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    email = payload.email.strip().lower()
     if payload.password != payload.confirm_password:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Passwords do not match")
 
-    existing = await db.execute(select(User).where(User.email == payload.email))
+    existing = await db.execute(select(User).where(User.email == email))
     if existing.scalar_one_or_none() is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered")
 
-    # Invalidate any previous pending codes for this email
-    await db.execute(delete(VerificationCode).where(VerificationCode.email == payload.email))
+    await db.execute(delete(VerificationCode).where(VerificationCode.email == email))
+    user = User(name=payload.name, email=email, password_hash=hash_password(payload.password))
+    db.add(user)
+    await db.flush()
+    db.add(UserSettings(user_id=user.id))
+    await db.commit()
+
+    access_token = create_access_token(str(user.id))
+    refresh_token = create_refresh_token(str(user.id))
+    _set_auth_cookies(response, refresh_token)
+
+    try:
+        await send_welcome_email(email, payload.name)
+    except Exception:
+        logger.exception("Failed to send welcome email")
+
+    return TokenResponse(access_token=access_token)
+
+
+@router.post("/register-with-code", response_model=RegisterResponse)
+@limiter.limit("5/minute")
+async def register_with_code(request: Request, payload: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    email = payload.email.strip().lower()
+    if payload.password != payload.confirm_password:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Passwords do not match")
+
+    existing = await db.execute(select(User).where(User.email == email))
+    if existing.scalar_one_or_none() is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered")
+
+    await db.execute(delete(VerificationCode).where(VerificationCode.email == email))
 
     code = generate_verification_code()
     verification = VerificationCode(
-        email=payload.email,
+        email=email,
         name=payload.name,
         password_hash=hash_password(payload.password),
         code=code,
@@ -101,16 +133,22 @@ async def register(request: Request, payload: RegisterRequest, db: AsyncSession 
     db.add(verification)
     await db.commit()
 
-    await send_verification_code(payload.email, code, payload.name)
-    return RegisterResponse(email=payload.email)
+    try:
+        await send_verification_code(email, code, payload.name)
+    except Exception:
+        logger.exception("Failed to send verification email")
+        if settings.EMAIL_DELIVERY_REQUIRED:
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Не удалось отправить код на почту. Попробуйте позже.")
+    return RegisterResponse(email=email)
 
 
 @router.post("/resend-code", response_model=MessageResponse)
 @limiter.limit("3/minute")
 async def resend_code(request: Request, payload: ResendCodeRequest, db: AsyncSession = Depends(get_db)):
+    email = payload.email.strip().lower()
     result = await db.execute(
         select(VerificationCode)
-        .where(VerificationCode.email == payload.email, VerificationCode.consumed.is_(False))
+        .where(VerificationCode.email == email, VerificationCode.consumed.is_(False))
         .order_by(VerificationCode.created_at.desc())
     )
     verification = result.scalars().first()
@@ -122,7 +160,11 @@ async def resend_code(request: Request, payload: ResendCodeRequest, db: AsyncSes
     verification.expires_at = datetime.now(timezone.utc) + timedelta(minutes=CODE_TTL_MINUTES)
     await db.commit()
 
-    await send_verification_code(payload.email, verification.code, verification.name)
+    try:
+        await send_verification_code(email, verification.code, verification.name)
+    except Exception:
+        logger.exception("Failed to resend verification email")
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Не удалось отправить код на почту. Попробуйте позже.")
     return MessageResponse(message="Code resent")
 
 
@@ -131,9 +173,10 @@ async def resend_code(request: Request, payload: ResendCodeRequest, db: AsyncSes
 async def verify_code(
     request: Request, response: Response, payload: VerifyCodeRequest, db: AsyncSession = Depends(get_db)
 ):
+    email = payload.email.strip().lower()
     result = await db.execute(
         select(VerificationCode)
-        .where(VerificationCode.email == payload.email, VerificationCode.consumed.is_(False))
+        .where(VerificationCode.email == email, VerificationCode.consumed.is_(False))
         .order_by(VerificationCode.created_at.desc())
     )
     verification = result.scalars().first()
@@ -172,7 +215,8 @@ async def verify_code(
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("10/minute")
 async def login(request: Request, response: Response, payload: LoginRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == payload.email))
+    email = payload.email.strip().lower()
+    result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if user is None or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
@@ -216,7 +260,8 @@ async def logout(request: Request, response: Response):
 @router.post("/forgot-password", response_model=MessageResponse)
 @limiter.limit("3/minute")
 async def forgot_password(request: Request, payload: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == payload.email))
+    email = payload.email.strip().lower()
+    result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
 
     # Always respond the same way to avoid leaking which emails are registered.
@@ -232,7 +277,13 @@ async def forgot_password(request: Request, payload: ForgotPasswordRequest, db: 
         )
         await db.commit()
         reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
-        await send_password_reset(payload.email, reset_url)
+        try:
+            await send_password_reset(email, reset_url)
+        except Exception:
+            logger.exception("Failed to send password reset email")
+            if not settings.EMAIL_DELIVERY_REQUIRED:
+                return MessageResponse(message=f"Ссылка для сброса пароля: {reset_url}")
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Не удалось отправить письмо для сброса пароля. Попробуйте позже.")
 
     return MessageResponse(message="If this email exists, a reset link has been sent")
 
@@ -301,30 +352,19 @@ async def google_callback(request: Request, code: str, response: Response, db: A
     user = existing_user.scalar_one_or_none()
 
     if not user:
-        # Invalidate any previous pending codes for this email
         await db.execute(delete(VerificationCode).where(VerificationCode.email == email))
-        
-        code_str = generate_verification_code()
-        verification = VerificationCode(
-            email=email,
+        user = User(
             name=name,
-            password_hash="",
-            code=code_str,
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=CODE_TTL_MINUTES),
+            email=email,
+            password_hash=hash_password(generate_reset_token()),
         )
-        db.add(verification)
+        db.add(user)
+        await db.flush()
+        db.add(UserSettings(user_id=user.id))
         await db.commit()
-        
-        from app.services.email_service import send_verification_code
-        import asyncio
-        asyncio.create_task(send_verification_code(email, code_str, name))
-        
-        import urllib.parse
-        encoded_email = urllib.parse.quote(email)
-        return RedirectResponse(f"{settings.FRONTEND_URL}/verify?email={encoded_email}")
 
     refresh_token = create_refresh_token(str(user.id))
     
-    resp = RedirectResponse(f"{settings.FRONTEND_URL}/chat")
+    resp = RedirectResponse(f"{settings.FRONTEND_URL}/auth/google/callback")
     _set_auth_cookies(resp, refresh_token)
     return resp

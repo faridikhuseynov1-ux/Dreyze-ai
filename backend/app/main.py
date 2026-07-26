@@ -18,12 +18,28 @@ from app.api.routes.sandbox import router as sandbox_router
 from app.core.config import settings
 from app.core.rate_limit import limiter
 from app.db.session import init_db
+from app.db.session import SessionLocal
+from app.models.user import User
+from sqlalchemy import select
+
+
+async def grant_required_plans() -> None:
+    async with SessionLocal() as db:
+        result = await db.execute(select(User).where(User.email == "faridhuse40@gmail.com"))
+        user = result.scalar_one_or_none()
+        if user is None:
+            return
+        user.plan = "infinite"
+        user.tokens_used = 0
+        user.requests_today = 0
+        await db.commit()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
     await init_db()
+    await grant_required_plans()
     yield
 
 
@@ -68,6 +84,7 @@ app.include_router(memory_router, prefix="/api")
 app.include_router(uploads_router, prefix="/api")
 app.include_router(sandbox_router, prefix="/api")
 app.include_router(tts_router, prefix="/api")
+app.include_router(websocket_router, prefix="/api")
 app.include_router(websocket_router)
 
 

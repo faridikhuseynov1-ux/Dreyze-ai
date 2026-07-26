@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-Model = Literal["gemini", "gpt", "claude", "deepseek", "qwen", "llama", "grok"]
+Model = Literal["gemini", "gpt", "claude", "deepseek", "qwen", "llama", "grok", "glm", "kmc/kimi-for-coding"]
 Mode = Literal["fast", "smart", "reasoning", "research", "vision"]
 
 
