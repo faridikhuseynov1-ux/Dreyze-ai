@@ -333,10 +333,10 @@ async def _stream_and_save(
     )
     db.add(assistant_message)
     
-    # Calculate tokens (User-friendly counting: only new text)
+    # Approximate OpenAI-style token usage without blocking the stream on a tokenizer.
     prompt_chars = len(last_user_text)
     completion_chars = len(accumulated)
-    estimated_tokens = max(1, (prompt_chars + completion_chars) * 15)
+    estimated_tokens = max(1, (prompt_chars + completion_chars + 3) // 4)
     
     session_result = await db.execute(select(ChatSession).where(ChatSession.id == session_id))
     session_obj = session_result.scalar_one()

@@ -53,6 +53,12 @@ MODEL_CATALOG: dict[str, dict[str, str]] = {
         "fast": "cx/gpt-5.2-pro-2025-12-11",
         "reasoning": "cx/gpt-5.2-pro-2025-12-11",
         "vision": "cx/gpt-5.2-pro-2025-12-11",
+    },
+    "kmc/kimi-for-coding": {
+        "default": "kmc/kimi-for-coding",
+        "fast": "kmc/kimi-for-coding",
+        "reasoning": "kmc/kimi-for-coding",
+        "vision": "kmc/kimi-for-coding",
     }
 }
 
@@ -106,6 +112,33 @@ def build_user_content(text: str, attachments: list[dict]) -> str | list[dict]:
     return parts
 
 
+def _provider_candidates() -> list[dict[str, str]]:
+    providers = list(settings.ai_providers_list)
+    for key in [
+        settings.OPENROUTER_API_KEY,
+        settings.OPENROUTER_API_KEY_FALLBACK_1,
+        settings.OPENROUTER_API_KEY_FALLBACK_2,
+    ]:
+        if key:
+            providers.append({"url": settings.OPENROUTER_BASE_URL, "key": key})
+
+    seen: set[tuple[str, str]] = set()
+    unique: list[dict[str, str]] = []
+    for provider in providers:
+        api_url = provider.get("url", "https://api.vibecode-claude.online/v1").strip()
+        api_key = provider.get("key", "").strip()
+        if not api_key:
+            continue
+        if not api_url.endswith("/v1") and not api_url.endswith("/chat/completions"):
+            api_url = api_url.rstrip("/") + "/v1"
+        identity = (api_url, api_key[-12:])
+        if identity in seen:
+            continue
+        seen.add(identity)
+        unique.append({"url": api_url, "key": api_key})
+    return unique
+
+
 async def stream_completion(
     messages: list[dict],
     model: str,
@@ -132,28 +165,19 @@ async def stream_completion(
         "X-Title": "Dreyze AI Chat",
     }
 
-    providers = settings.ai_providers_list
-    for key in [
-        settings.OPENROUTER_API_KEY,
-        settings.OPENROUTER_API_KEY_FALLBACK_1,
-        settings.OPENROUTER_API_KEY_FALLBACK_2,
-    ]:
-        if key:
-            providers.append({"url": settings.OPENROUTER_BASE_URL, "key": key})
+    providers = _provider_candidates()
     if not providers:
         raise RuntimeError("No AI provider API keys configured")
 
     last_error = None
     has_yielded = False
     for provider in providers:
-        api_url = provider.get("url", "https://api.vibecode-claude.online/v1")
-        if not api_url.endswith("/v1") and not api_url.endswith("/chat/completions"):
-            api_url = api_url.rstrip("/") + "/v1"
-            
+        api_url = provider["url"]
         api_key = provider.get("key")
         headers["Authorization"] = f"Bearer {api_key}"
         try:
-            async with httpx.AsyncClient(timeout=120) as client:
+            timeout = httpx.Timeout(connect=10, read=90, write=20, pool=10)
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 async with client.stream(
                     "POST", f"{api_url}/chat/completions", json=payload, headers=headers
                 ) as response:
@@ -188,4 +212,4 @@ async def stream_completion(
             continue
             
     if last_error:
-        raise RuntimeError(f"Все провайдеры недоступны. Последняя ошибка: {last_error}")
+        raise RuntimeError("AI временно не ответил. Попробуйте еще раз или выберите другую модель.")

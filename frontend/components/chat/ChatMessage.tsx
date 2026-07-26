@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Check, Copy, Download, Pencil, RotateCcw, Trash2, Pin, Play, Globe } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { CodePreviewModal } from "@/components/chat/CodePreviewModal";
 import ReactMarkdown from "react-markdown";
@@ -76,7 +76,7 @@ interface ChatMessageProps {
   onContinue?: (id: string) => void;
 }
 
-export function ChatMessage({ message, userName, onEdit, onDelete, onRegenerate, onPin, onContinue }: ChatMessageProps) {
+function ChatMessageComponent({ message, userName, onEdit, onDelete, onRegenerate, onPin, onContinue }: ChatMessageProps) {
   const compactMode = usePreferencesStore((s) => s.compactMode);
   const [copied, setCopied] = useState(false);
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
@@ -389,3 +389,5 @@ export function ChatMessage({ message, userName, onEdit, onDelete, onRegenerate,
     </motion.div>
   );
 }
+
+export const ChatMessage = memo(ChatMessageComponent);

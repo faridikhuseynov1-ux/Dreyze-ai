@@ -27,6 +27,7 @@ export interface ChatSocketHandlers {
 export class ChatSocket {
   private ws: WebSocket | null = null;
   private queue: string[] = [];
+  private closed = false;
 
   constructor(
     private sessionId: string,
@@ -42,6 +43,10 @@ export class ChatSocket {
     this.ws = new WebSocket(url);
 
     this.ws.onopen = () => {
+      if (this.closed) {
+        this.ws?.close();
+        return;
+      }
       this.queue.forEach((msg) => this.ws?.send(msg));
       this.queue = [];
     };
@@ -84,6 +89,10 @@ export class ChatSocket {
   }
 
   private sendRaw(payload: object) {
+    if (this.closed) {
+      this.handlers.onError("Соединение с AI уже закрыто. Обновите страницу и попробуйте снова.");
+      return;
+    }
     const json = JSON.stringify(payload);
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(json);
@@ -105,6 +114,8 @@ export class ChatSocket {
   }
 
   close() {
+    this.closed = true;
+    this.queue = [];
     this.ws?.close();
     this.ws = null;
   }
