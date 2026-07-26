@@ -37,7 +37,7 @@ import {
 import type { ChatSession, SearchResult } from "@/lib/types";
 import { cn, formatRelativeTime } from "@/lib/utils";
 
-const FOLDER_COLORS = ["#3b82f6", "#22c55e", "#a855f7", "#f97316", "#ec4899", "#eab308"];
+const FOLDER_COLORS = ["#111827", "#374151", "#4b5563", "#6b7280", "#9ca3af", "#d1d5db"];
 
 export function Sidebar() {
   const router = useRouter();
@@ -285,7 +285,7 @@ export function Sidebar() {
                   session.folder_id === f.id ? "text-text font-medium" : "text-text-secondary"
                 )}
               >
-                <FolderIcon className="h-3.5 w-3.5" style={{ color: f.color || "#3b82f6" }} />
+                <FolderIcon className="h-3.5 w-3.5" style={{ color: f.color || "currentColor" }} />
                 <span className="truncate">{f.name}</span>
               </button>
             ))}
@@ -435,7 +435,7 @@ export function Sidebar() {
               >
                 <div className="flex items-center gap-2 truncate">
                   {isExpanded ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
-                  <FolderIcon className="h-3.5 w-3.5 shrink-0" style={{ color: folder.color || "#3b82f6" }} />
+                  <FolderIcon className="h-3.5 w-3.5 shrink-0" style={{ color: folder.color || "currentColor" }} />
                   <span className="truncate text-text font-semibold">{folder.name}</span>
                   <span className="rounded-full bg-bg px-1.5 py-0.5 text-[10px] text-text-secondary">
                     {folderSessions.length}
