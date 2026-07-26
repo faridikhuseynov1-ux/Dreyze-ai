@@ -122,7 +122,7 @@ export const useFolderStore = create<FolderState>((set) => ({
       /* ignore endpoint errors */
     }
   },
-  createFolder: async (name: string, color = "#ffffff") => {
+  createFolder: async (name: string, color = "#3b82f6") => {
     try {
       const folder = await apiRequest<Folder>("/folders", {
         method: "POST",

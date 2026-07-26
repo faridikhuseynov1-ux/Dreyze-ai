@@ -13,7 +13,7 @@ export const MODEL_OPTIONS: DropdownOption<ModelId>[] = [
   { value: "grok", label: "Grok", description: "xAI" },
   { value: "gemini", label: "Gemini", description: "Google" },
   { value: "gpt", label: "GPT", description: "OpenAI" },
-  { value: "kmc/kimi-for-coding", label: "Dreyze Ai", badge: <span className="rounded border border-border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-text-secondary">Beta</span>, description: "Kimi" },
+  { value: "kmc/kimi-for-coding", label: "Dreyze Ai", badge: <span className="text-[10px] font-bold text-yellow-500 uppercase tracking-wider bg-yellow-500/10 px-1.5 py-0.5 rounded">Beta</span>, description: "Kimi" },
 ];
 
 export function ModelSelector() {
