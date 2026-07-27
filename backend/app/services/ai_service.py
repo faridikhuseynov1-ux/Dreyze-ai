@@ -176,9 +176,19 @@ def _normalize_chat_completions_url(api_url: str) -> str:
 
 
 def _provider_candidates() -> list[dict[str, str]]:
-    providers = list(settings.ai_providers_list)
+    providers = []
     if settings.ANYMODEL_API_KEY:
         providers.append({"url": settings.ANYMODEL_BASE_URL, "key": settings.ANYMODEL_API_KEY})
+    providers.extend(
+        provider
+        for provider in settings.ai_providers_list
+        if "anymodel.org" in provider.get("url", "").lower()
+    )
+    providers.extend(
+        provider
+        for provider in settings.ai_providers_list
+        if "anymodel.org" not in provider.get("url", "").lower()
+    )
     for key in [
         settings.OPENROUTER_API_KEY,
         settings.OPENROUTER_API_KEY_FALLBACK_1,

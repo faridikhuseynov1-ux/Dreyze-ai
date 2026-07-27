@@ -68,12 +68,16 @@ class Settings(BaseSettings):
 
     @property
     def ai_api_keys(self) -> list[str]:
+        anymodel_keys = [provider["key"] for provider in self.ai_providers_list if "anymodel.org" in provider.get("url", "").lower()]
+        other_provider_keys = [provider["key"] for provider in self.ai_providers_list if "anymodel.org" not in provider.get("url", "").lower()]
         keys = [
+            self.ANYMODEL_API_KEY,
+            *anymodel_keys,
+            *other_provider_keys,
             self.OPENROUTER_API_KEY,
             self.OPENROUTER_API_KEY_FALLBACK_1,
             self.OPENROUTER_API_KEY_FALLBACK_2,
         ]
-        keys.extend(provider["key"] for provider in self.ai_providers_list)
         return [key for key in keys if key]
 
 
