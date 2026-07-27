@@ -245,7 +245,7 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
 				configurationService.updateValue(ChatConfiguration.AIDisabled, false);
 				if (options?.returnResult) {
 					await commandService.executeCommand('dreyze-ai.startAgent');
-					return { success: true };
+					return true;
 				}
 
 				await commandService.executeCommand('dreyze-ai.startAgent');
