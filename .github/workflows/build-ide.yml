@@ -39,6 +39,12 @@ jobs:
       - name: Install dependencies
         run: npm ci || npm install
 
+      - name: Install Dreyze AI extension dependencies
+        run: npm ci --prefix extensions/dreyze-ai
+
+      - name: Install Copilot extension dependencies
+        run: npm ci --prefix extensions/copilot
+
       - name: Build Windows EXE
         run: npm run gulp vscode-win32-x64
 
