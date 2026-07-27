@@ -49,6 +49,9 @@ jobs:
       - name: Install Copilot extension dependencies
         run: npm ci --prefix extensions/copilot
 
+      - name: Compile Dreyze AI extension
+        run: npm run compile --prefix extensions/dreyze-ai
+
       - name: Compile
         run: npm run gulp core-ci
 

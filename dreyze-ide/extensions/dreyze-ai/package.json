@@ -4,6 +4,7 @@
 	"description": "Built-in AI Agent for Dreyze Code",
 	"version": "1.0.0",
 	"publisher": "dreyze",
+	"icon": "media/dreyze-ai.png",
 	"engines": {
 		"vscode": "^1.90.0"
 	},
@@ -11,7 +12,12 @@
 		"Machine Learning",
 		"Other"
 	],
-	"activationEvents": [],
+	"activationEvents": [
+		"onView:dreyze-ai.chatView",
+		"onCommand:dreyze-ai.startAgent",
+		"onCommand:dreyze-ai.setApiKey",
+		"onCommand:dreyze-ai.clearContext"
+	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
@@ -58,7 +64,7 @@
 				{
 					"id": "dreyze-ai-sidebar",
 					"title": "Dreyze AI",
-					"icon": "$(hubot)"
+					"icon": "media/dreyze-ai.svg"
 				}
 			]
 		},
@@ -67,7 +73,7 @@
 				{
 					"type": "webview",
 					"id": "dreyze-ai.chatView",
-					"name": "Agent Chat"
+					"name": "Dreyze AI Chat"
 				}
 			]
 		}
