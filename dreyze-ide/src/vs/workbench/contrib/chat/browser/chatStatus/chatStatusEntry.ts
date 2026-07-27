@@ -24,7 +24,6 @@ import { $ as h, disposableWindowInterval } from '../../../../../base/browser/do
 import { isNewUser } from './chatStatus.js';
 import product from '../../../../../platform/product/common/product.js';
 import { isCompletionsEnabled } from '../../../../../editor/common/services/completionsEnablement.js';
-import { CHAT_SETUP_ACTION_ID } from '../actions/chatActions.js';
 import { IContextKeyService } from '../../../../../platform/contextkey/common/contextkey.js';
 import { isWeb } from '../../../../../base/common/platform.js';
 import { InEditorZenModeContext } from '../../../../common/contextkeys.js';
@@ -330,8 +329,8 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 	//#endregion
 
 	private getEntryProps(): IStatusbarEntry {
-		let text = '$(copilot)';
-		let ariaLabel = localize('chatStatusAria', "Copilot status");
+		let text = '$(sparkle)';
+		let ariaLabel = localize('chatStatusAria', "Dreyze AI status");
 		let kind: StatusbarEntryKind | undefined;
 
 		if (isNewUser(this.chatEntitlementService)) {
@@ -351,12 +350,11 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 
 			// Disabled
 			if (this.chatEntitlementService.sentiment.disabled || this.chatEntitlementService.sentiment.untrusted) {
-				text = '$(copilot-unavailable)';
-				ariaLabel = localize('copilotDisabledStatus', "Copilot disabled");
+				text = '$(warning)';
+				ariaLabel = localize('copilotDisabledStatus', "Dreyze AI disabled");
 			}
 
-			// Signed out — keep showing Sign-in affordance even when BYOK models are present
-			// so air-gapped users can still authenticate to unlock the full Copilot experience.
+			// Signed out — open the local Dreyze AI agent instead of Copilot setup.
 			else if (this.chatEntitlementService.entitlement === ChatEntitlement.Unknown) {
 				return this.getSetupEntryProps();
 			}
@@ -364,34 +362,34 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 			// Quota Exceeded (all tracked plans share the premium chat quota)
 			else if (isTrackedEntitlement(this.chatEntitlementService.entitlement) && isQuotaBlocked(quotas)) {
 				const quotaWarning = localize('chatQuotaExceededStatus', "Quota reached");
-				text = `$(copilot-warning) ${quotaWarning}`;
+				text = `$(warning) ${quotaWarning}`;
 				ariaLabel = quotaWarning;
 				kind = 'prominent';
 			}
 
-			// Copilot Resumed (limit reset after the user was previously blocked)
+			// Dreyze AI resumed (limit reset after the user was previously blocked)
 			else if (this.quotaResumeState === 'resumed') {
-				const resumedLabel = localize('chatResumedStatus', "Copilot Resumed");
-				text = `$(copilot) ${resumedLabel}`;
+				const resumedLabel = localize('chatResumedStatus', "Dreyze AI Resumed");
+				text = `$(sparkle) ${resumedLabel}`;
 				ariaLabel = resumedLabel;
 				kind = 'prominent';
 			}
 
 			// Completions Disabled
 			else if (this.editorService.activeTextEditorLanguageId && !isCompletionsEnabled(this.configurationService, this.editorService.activeTextEditorLanguageId)) {
-				text = '$(copilot-unavailable)';
+				text = '$(warning)';
 				ariaLabel = localize('completionsDisabledStatus', "Inline suggestions disabled");
 			}
 
 			// Completions Snoozed
 			else if (this.completionsService.isSnoozing()) {
-				text = '$(copilot-snooze)';
+				text = '$(debug-pause)';
 				ariaLabel = localize('completionsSnoozedStatus', "Inline suggestions snoozed");
 			}
 		}
 
 		const baseResult = {
-			name: localize('chatStatus', "Copilot Status"),
+			name: localize('chatStatus', "Dreyze AI Status"),
 			text,
 			ariaLabel,
 			command: ShowTooltipCommand,
@@ -406,12 +404,12 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 
 	private getSetupEntryProps(): IStatusbarEntry {
 		const showSignInLabel = !this.isSignInTitleBarAffordanceVisible();
-		const signInLabel = localize('signIn', "Sign In");
+		const signInLabel = localize('signIn', "Dreyze AI");
 		return {
-			name: localize('chatStatus', "Copilot Status"),
-			text: showSignInLabel ? `$(copilot) ${signInLabel}` : '$(copilot)',
-			ariaLabel: showSignInLabel ? signInLabel : localize('chatStatusAria', "Copilot status"),
-			command: CHAT_SETUP_ACTION_ID,
+			name: localize('chatStatus', "Dreyze AI Status"),
+			text: showSignInLabel ? `$(sparkle) ${signInLabel}` : '$(sparkle)',
+			ariaLabel: showSignInLabel ? signInLabel : localize('chatStatusAria', "Dreyze AI status"),
+			command: 'dreyze-ai.startAgent',
 			showInAllWindows: true,
 			kind: undefined,
 			content: this.entryAnchor,
