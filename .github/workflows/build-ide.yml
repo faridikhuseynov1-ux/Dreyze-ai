@@ -46,7 +46,7 @@ jobs:
         run: npm ci --prefix extensions/copilot
 
       - name: Build Windows EXE
-        run: npm run gulp vscode-win32-x64
+        run: npm run gulp vscode-win32-x64-min-ci
 
       - name: Zip Build
         working-directory: .
