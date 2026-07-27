@@ -1,0 +1,64 @@
+name: Build Dreyze Windows EXE
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Windows x64 installer
+    runs-on: windows-latest
+    timeout-minutes: 120
+
+    defaults:
+      run:
+        working-directory: dreyze-ide
+
+    env:
+      npm_config_arch: x64
+      npm_config_foreground_scripts: "true"
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: dreyze-ide/.nvmrc
+          cache: npm
+          cache-dependency-path: dreyze-ide/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile
+        run: npm run gulp core-ci
+
+      - name: Package Windows app
+        run: npm run gulp vscode-win32-x64-min-ci
+
+      - name: Build user installer
+        run: npm run gulp vscode-win32-x64-user-setup
+
+      - name: Build system installer
+        run: npm run gulp vscode-win32-x64-system-setup
+
+      - name: Upload user installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: dreyze-code-win32-x64-user-setup
+          path: dreyze-ide/.build/win32-x64/user-setup/VSCodeSetup.exe
+
+      - name: Upload system installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: dreyze-code-win32-x64-system-setup
+          path: dreyze-ide/.build/win32-x64/system-setup/VSCodeSetup.exe
+
+      - name: Upload portable app folder
+        uses: actions/upload-artifact@v4
+        with:
+          name: dreyze-code-win32-x64-portable
+          path: VSCode-win32-x64
