@@ -86,6 +86,66 @@
 			}
 		}
 	],
+	"extensionKind": {
+		"dreyze.dreyze-ai": [
+			"ui"
+		]
+	},
+	"defaultChatAgent": {
+		"extensionId": "dreyze.dreyze-ai",
+		"chatExtensionId": "dreyze.dreyze-ai",
+		"chatExtensionOutputId": "dreyze-ai.Dreyze AI.log",
+		"chatExtensionOutputExtensionStateCommand": "dreyze-ai.startAgent",
+		"documentationUrl": "https://dreyzfarid.online",
+		"termsStatementUrl": "https://dreyzfarid.online",
+		"privacyStatementUrl": "https://dreyzfarid.online",
+		"skusDocumentationUrl": "https://dreyzfarid.online",
+		"optimizeUsageDocumentationUrl": "https://dreyzfarid.online",
+		"publicCodeMatchesUrl": "https://dreyzfarid.online",
+		"managePlanUrl": "https://dreyzfarid.online",
+		"upgradePlanUrl": "https://dreyzfarid.online",
+		"signUpUrl": "https://dreyzfarid.online",
+		"provider": {
+			"default": {
+				"id": "dreyze",
+				"name": "Dreyze AI"
+			},
+			"enterprise": {
+				"id": "dreyze",
+				"name": "Dreyze AI"
+			},
+			"google": {
+				"id": "dreyze",
+				"name": "Dreyze AI"
+			},
+			"apple": {
+				"id": "dreyze",
+				"name": "Dreyze AI"
+			}
+		},
+		"providerExtensionId": "dreyze.dreyze-ai",
+		"providerUriSetting": "dreyze-ai.baseUrl",
+		"providerScopes": [
+			[
+				"dreyze-ai"
+			]
+		],
+		"entitlementUrl": "https://dreyzfarid.online",
+		"entitlementSignupLimitedUrl": "https://dreyzfarid.online",
+		"chatQuotaExceededContext": "dreyze-ai.chat.quotaExceeded",
+		"completionsQuotaExceededContext": "dreyze-ai.completions.quotaExceeded",
+		"walkthroughCommand": "dreyze-ai.startAgent",
+		"completionsMenuCommand": "dreyze-ai.startAgent",
+		"chatRefreshTokenCommand": "dreyze-ai.setApiKey",
+		"generateCommitMessageCommand": "dreyze-ai.startAgent",
+		"resolveMergeConflictsCommand": "dreyze-ai.startAgent",
+		"completionsAdvancedSetting": "dreyze-ai",
+		"completionsEnablementSetting": "dreyze-ai.enabled",
+		"nextEditSuggestionsSetting": "dreyze-ai.nextEditSuggestions.enabled",
+		"tokenEntitlementUrl": "https://dreyzfarid.online",
+		"mcpRegistryDataUrl": "https://dreyzfarid.online",
+		"managedSettingsUrl": "https://dreyzfarid.online"
+	},
 	"onboardingKeymaps": [
 		{
 			"id": "vscode",
