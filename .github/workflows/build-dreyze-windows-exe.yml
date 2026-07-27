@@ -43,6 +43,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Dreyze AI extension dependencies
+        run: npm ci --prefix extensions/dreyze-ai
+
       - name: Compile
         run: npm run gulp core-ci
 
