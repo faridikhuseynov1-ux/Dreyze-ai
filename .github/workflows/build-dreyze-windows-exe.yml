@@ -30,6 +30,16 @@ jobs:
           cache: npm
           cache-dependency-path: dreyze-ide/package-lock.json
 
+      - name: Setup Visual Studio path
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsPath) {
+            throw "Visual Studio with VC tools was not found"
+          }
+          "vs2022_install=$vsPath" >> $env:GITHUB_ENV
+
       - name: Install dependencies
         run: npm ci
 
