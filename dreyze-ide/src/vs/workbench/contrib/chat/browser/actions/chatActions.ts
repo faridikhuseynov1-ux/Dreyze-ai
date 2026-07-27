@@ -37,14 +37,11 @@ import product from '../../../../../platform/product/common/product.js';
 import { GitHubPaths, IDefaultAccountService } from '../../../../../platform/defaultAccount/common/defaultAccount.js';
 import { IStorageService } from '../../../../../platform/storage/common/storage.js';
 import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
-import { IWorkspace, IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
-import { IAgentHostEnablementService } from '../../../../../platform/agentHost/common/agentHostEnablementService.js';
+import { IWorkspace } from '../../../../../platform/workspace/common/workspace.js';
 import { ActiveEditorContext } from '../../../../common/contextkeys.js';
 import { IViewDescriptorService, ViewContainerLocation } from '../../../../common/views.js';
 import { ChatEntitlement, IChatEntitlementService } from '../../../../services/chat/common/chatEntitlementService.js';
-import { ACTIVE_GROUP, AUX_WINDOW_GROUP, SIDE_GROUP } from '../../../../services/editor/common/editorService.js';
 import { IHostService } from '../../../../services/host/browser/host.js';
-import { IWorkbenchLayoutService, Parts } from '../../../../services/layout/browser/layoutService.js';
 import { IPreferencesService } from '../../../../services/preferences/common/preferences.js';
 import { IViewsService } from '../../../../services/views/common/viewsService.js';
 import { EXTENSIONS_CATEGORY, IExtensionsWorkbenchService } from '../../../extensions/common/extensions.js';
@@ -59,7 +56,7 @@ import { ElicitationState, IChatService, IChatToolInvocation } from '../../commo
 import { ISCMHistoryItemChangeRangeVariableEntry, ISCMHistoryItemChangeVariableEntry } from '../../common/attachments/chatVariableEntries.js';
 import { IChatRequestViewModel, IChatResponseViewModel, isRequestVM } from '../../common/model/chatViewModel.js';
 import { IChatWidgetHistoryService } from '../../common/widget/chatWidgetHistoryService.js';
-import { ChatAgentLocation, ChatConfiguration, ChatModeKind, getDefaultNewChatSessionResource, resolveDefaultNewChatSessionType } from '../../common/constants.js';
+import { ChatAgentLocation, ChatConfiguration, ChatModeKind, resolveDefaultNewChatSessionType } from '../../common/constants.js';
 import { markPreferredCopilotHarness } from '../../common/chatSessionTypePreference.js';
 import { AICustomizationManagementCommands } from '../aiCustomization/aiCustomizationManagement.js';
 import { ILanguageModelChatSelector, ILanguageModelsService } from '../../common/languageModels.js';
@@ -67,7 +64,6 @@ import { CopilotUsageExtensionFeatureId } from '../../common/languageModelStats.
 import { ILanguageModelToolsConfirmationService } from '../../common/tools/languageModelToolsConfirmationService.js';
 import { ILanguageModelToolsService, IToolData, IToolSet, isToolSet, ToolAndToolSetEnablementMap } from '../../common/tools/languageModelToolsService.js';
 import { ChatViewId, IChatWidget, IChatWidgetService, isIChatViewViewContext } from '../chat.js';
-import { IChatEditorOptions } from '../widgetHosts/editor/chatEditor.js';
 import { ChatEditorInput, showClearEditingSessionConfirmation } from '../widgetHosts/editor/chatEditorInput.js';
 import { convertBufferToScreenshotVariable } from '../attachments/chatScreenshotContext.js';
 import { getChatSessionType } from '../../common/model/chatUri.js';
@@ -218,6 +214,10 @@ abstract class OpenChatGlobalAction extends Action2 {
 
 	override async run(accessor: ServicesAccessor, opts?: string | IChatViewOpenOptions): Promise<IChatAgentResult & { type?: 'confirmation' } | undefined> {
 		opts = typeof opts === 'string' ? { query: opts } : opts;
+		if (product.nameShort === 'Dreyze Code') {
+			await accessor.get(ICommandService).executeCommand('dreyze-ai.startAgent');
+			return undefined;
+		}
 
 		const chatService = accessor.get(IChatService);
 		const widgetService = accessor.get(IChatWidgetService);
@@ -575,14 +575,6 @@ export abstract class ModeOpenChatGlobalAction extends OpenChatGlobalAction {
 }
 
 export function registerChatActions() {
-	/**
-	 * Returns the session URI to use when opening a brand-new chat editor,
-	 * honoring the remembered harness preference and then the configured default.
-	 */
-	function getNewChatEditorSessionUri(accessor: ServicesAccessor): URI {
-		return getDefaultNewChatSessionResource(accessor.get(IConfigurationService), accessor.get(IChatSessionsService), accessor.get(IStorageService), accessor.get(IWorkspaceContextService).getWorkspace(), accessor.get(IAgentHostEnablementService).enabled);
-	}
-
 	registerAction2(PrimaryOpenChatGlobalAction);
 	registerAction2(class extends ModeOpenChatGlobalAction {
 		constructor() { super(ChatMode.Ask); }
@@ -613,38 +605,7 @@ export function registerChatActions() {
 		}
 
 		async run(accessor: ServicesAccessor) {
-			const layoutService = accessor.get(IWorkbenchLayoutService);
-			const viewsService = accessor.get(IViewsService);
-			const viewDescriptorService = accessor.get(IViewDescriptorService);
-			const widgetService = accessor.get(IChatWidgetService);
-
-			const chatLocation = viewDescriptorService.getViewLocationById(ChatViewId);
-			const chatVisible = viewsService.isViewVisible(ChatViewId);
-			if (chatVisible) {
-				this.updatePartVisibility(layoutService, chatLocation, false);
-			} else {
-				this.updatePartVisibility(layoutService, chatLocation, true);
-				(await widgetService.revealWidget())?.focusInput();
-			}
-		}
-
-		private updatePartVisibility(layoutService: IWorkbenchLayoutService, location: ViewContainerLocation | null, visible: boolean): void {
-			let part: Parts.PANEL_PART | Parts.SIDEBAR_PART | Parts.AUXILIARYBAR_PART | undefined;
-			switch (location) {
-				case ViewContainerLocation.Panel:
-					part = Parts.PANEL_PART;
-					break;
-				case ViewContainerLocation.Sidebar:
-					part = Parts.SIDEBAR_PART;
-					break;
-				case ViewContainerLocation.AuxiliaryBar:
-					part = Parts.AUXILIARYBAR_PART;
-					break;
-			}
-
-			if (part) {
-				layoutService.setPartHidden(!visible, part);
-			}
+			await accessor.get(ICommandService).executeCommand('dreyze-ai.startAgent');
 		}
 	});
 
@@ -681,8 +642,7 @@ export function registerChatActions() {
 		}
 
 		async run(accessor: ServicesAccessor) {
-			const widgetService = accessor.get(IChatWidgetService);
-			await widgetService.openSession(getNewChatEditorSessionUri(accessor), ACTIVE_GROUP, { pinned: true } satisfies IChatEditorOptions);
+			await accessor.get(ICommandService).executeCommand('dreyze-ai.startAgent');
 		}
 	});
 
@@ -705,8 +665,7 @@ export function registerChatActions() {
 		}
 
 		async run(accessor: ServicesAccessor) {
-			const widgetService = accessor.get(IChatWidgetService);
-			await widgetService.openSession(getNewChatEditorSessionUri(accessor), ACTIVE_GROUP, { pinned: true } satisfies IChatEditorOptions);
+			await accessor.get(ICommandService).executeCommand('dreyze-ai.startAgent');
 		}
 	});
 
@@ -729,8 +688,7 @@ export function registerChatActions() {
 		}
 
 		async run(accessor: ServicesAccessor) {
-			const widgetService = accessor.get(IChatWidgetService);
-			await widgetService.openSession(getNewChatEditorSessionUri(accessor), ACTIVE_GROUP, { pinned: true } satisfies IChatEditorOptions);
+			await accessor.get(ICommandService).executeCommand('dreyze-ai.startAgent');
 		}
 	});
 
@@ -753,8 +711,7 @@ export function registerChatActions() {
 		}
 
 		async run(accessor: ServicesAccessor) {
-			const widgetService = accessor.get(IChatWidgetService);
-			await widgetService.openSession(getNewChatEditorSessionUri(accessor), ACTIVE_GROUP, { pinned: true } satisfies IChatEditorOptions);
+			await accessor.get(ICommandService).executeCommand('dreyze-ai.startAgent');
 		}
 	});
 
@@ -770,8 +727,7 @@ export function registerChatActions() {
 		}
 
 		async run(accessor: ServicesAccessor) {
-			const widgetService = accessor.get(IChatWidgetService);
-			await widgetService.openSession(getNewChatEditorSessionUri(accessor), SIDE_GROUP, { pinned: true } satisfies IChatEditorOptions);
+			await accessor.get(ICommandService).executeCommand('dreyze-ai.startAgent');
 		}
 	});
 
@@ -796,8 +752,7 @@ export function registerChatActions() {
 		}
 
 		async run(accessor: ServicesAccessor) {
-			const widgetService = accessor.get(IChatWidgetService);
-			await widgetService.openSession(getNewChatEditorSessionUri(accessor), AUX_WINDOW_GROUP, { pinned: true, auxiliary: { compact: true, bounds: { width: 640, height: 640 } } } satisfies IChatEditorOptions);
+			await accessor.get(ICommandService).executeCommand('dreyze-ai.startAgent');
 		}
 	});
 

@@ -263,7 +263,7 @@ CommandsRegistry.registerCommand({
 	id: 'welcome.newWorkspaceChat',
 	handler: (accessor, stepID: string) => {
 		const commandService = accessor.get(ICommandService);
-		commandService.executeCommand('workbench.action.chat.open', { mode: 'agent', query: '#new ', isPartialQuery: true });
+		commandService.executeCommand('dreyze-ai.startAgent');
 	}
 });
 
@@ -357,4 +357,3 @@ registerWorkbenchContribution2(StartupPageEditorResolverContribution.ID, Startup
 registerWorkbenchContribution2(StartupPageRunnerContribution.ID, StartupPageRunnerContribution, WorkbenchPhase.AfterRestored);
 
 AccessibleViewRegistry.register(new GettingStartedAccessibleView());
-
