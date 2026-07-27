@@ -45,6 +45,9 @@ jobs:
       - name: Install Copilot extension dependencies
         run: npm ci --prefix extensions/copilot
 
+      - name: Compile
+        run: npm run gulp core-ci
+
       - name: Build Windows EXE
         run: npm run gulp vscode-win32-x64-min-ci
 
