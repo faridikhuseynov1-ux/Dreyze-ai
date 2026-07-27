@@ -18,8 +18,41 @@
 			{
 				"command": "dreyze-ai.startAgent",
 				"title": "Dreyze AI: Open Agent Chat"
+			},
+			{
+				"command": "dreyze-ai.setApiKey",
+				"title": "Dreyze AI: Set AnyModel API Key"
+			},
+			{
+				"command": "dreyze-ai.clearContext",
+				"title": "Dreyze AI: Clear Agent Context"
 			}
 		],
+		"configuration": {
+			"title": "Dreyze AI",
+			"properties": {
+				"dreyze-ai.baseUrl": {
+					"type": "string",
+					"default": "https://anymodel.org/v1",
+					"description": "OpenAI-compatible API base URL used by the built-in Dreyze AI agent."
+				},
+				"dreyze-ai.model": {
+					"type": "string",
+					"default": "kmc/kimi-for-coding",
+					"enum": [
+						"ag/claude-sonnet-4-6",
+						"am/qwen3.6-35b-a3b",
+						"am/deepseek-v4-pro",
+						"glm/glm-5.1",
+						"xai/grok-code-fast-1",
+						"gc/gemini-2.5-flash",
+						"cx/gpt-5.6-sol",
+						"kmc/kimi-for-coding"
+					],
+					"description": "Default Dreyze AI model. The sidebar can switch models per request."
+				}
+			}
+		},
 		"viewsContainers": {
 			"activitybar": [
 				{
